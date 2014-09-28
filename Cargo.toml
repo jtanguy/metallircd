@@ -1,0 +1,6 @@
+[package]
+
+name = "metallircd"
+version = "0.0.1"
+authors = ["Victor Berger <victor.berger@m4x.org>"]
+
