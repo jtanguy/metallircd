@@ -4,3 +4,9 @@ name = "metallircd"
 version = "0.0.1"
 authors = ["Victor Berger <victor.berger@m4x.org>"]
 
+[dependencies.irccp]
+git = "https://github.com/metallirc/irccp-rs.git"
+
+[dependencies.uuid]
+git = "https://github.com/rust-lang/uuid.git"
+

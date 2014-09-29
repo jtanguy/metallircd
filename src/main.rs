@@ -1,3 +1,12 @@
+//! metallircd
+
+extern crate irccp;
+extern crate uuid;
+
+use std::sync::RWLock;
+
+pub mod users;
+
 fn main() {
-    println!("Hello, world!")
+    let user_manager = RWLock::new(users::UserManager::new());
 }
