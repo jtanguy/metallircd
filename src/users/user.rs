@@ -16,10 +16,11 @@ pub struct UserData {
     socket: Mutex<BufferedStream<TcpStream>>,
     /// The queue of this user.
     queue: MPSCQueue<IRCMessage>,
-    /// Other data, immutable without locking the whole item
     pub nickname: String,
     pub username: String,
-    pub hostname: String
+    pub hostname: String,
+    /// is this user disconnected ?
+    pub zombie: bool
 }
 
 /// Private handler for this user_data
@@ -73,7 +74,8 @@ impl UserData {
             queue: MPSCQueue::new(),
             nickname: nick,
             username: username,
-            hostname: hostname
+            hostname: hostname,
+            zombie: false
         }
     }
 

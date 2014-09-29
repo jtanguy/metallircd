@@ -72,4 +72,9 @@ impl UserManager {
         true
     }
 
+    #[experimental]
+    pub fn is_empty(&self) -> bool {
+        self.users.is_empty()
+    }
+
 }
