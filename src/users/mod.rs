@@ -2,9 +2,11 @@
 
 pub use self::user::{UserData, PrivateUserDataHandler};
 pub use self::usermanager::UserManager;
+pub use self::newuser::NewUser;
 
 use uuid::Uuid;
 
+mod newuser;
 mod user;
 mod usermanager;
 

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
+use super::newuser::NewUser;
 use super::user::UserData;
 
 /// The container for all users of the server.
@@ -28,17 +29,30 @@ impl UserManager {
     }
 
     /// Inserts a new user in this manager.
+    /// Returns the new Uuid on success, returns the NewUser on failure
+    /// (if a field was missing or the nickname already used).
     #[experimental]
-    pub fn insert(&mut self, user: UserData) -> Uuid {
-        let nick = user.nickname.clone();
+    pub fn insert(&mut self, user: NewUser) -> Result<Uuid, NewUser> {
+        if user.nickname.is_none() || user.username.is_none() || user.username.is_none() {
+            Err(user)
+        } else if self.nicks.contains_key(user.nickname.as_ref().unwrap()) {
+            Err(user)
+        } else { // all is ok
 
-        let mut id = Uuid::new_v4();
-        // better safe than sorry ?
-        while self.users.contains_key(&id) { id = Uuid::new_v4(); }
+            let full_user = UserData::new(user.socket,
+                                          user.nickname.unwrap(),
+                                          user.username.unwrap(),
+                                          user.hostname.unwrap());
+            let nick = full_user.nickname.clone();
 
-        self.users.insert(id.clone(), user);
-        self.nicks.insert(nick, id.clone());
-        id
+            let mut id = Uuid::new_v4();
+            // better safe than sorry ?
+            while self.users.contains_key(&id) { id = Uuid::new_v4(); }
+
+            self.users.insert(id.clone(), full_user);
+            self.nicks.insert(nick, id.clone());
+            Ok(id)
+        }
     }
 
     #[experimental]
