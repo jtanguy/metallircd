@@ -9,6 +9,8 @@ use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use irccp::IRCMessage;
 
+use util;
+
 /// Data describing a user.
 #[experimental]
 pub struct UserData {
@@ -54,11 +56,7 @@ impl<'a> PrivateUserDataHandler<'a> {
     /// Sends given message to the client.
     #[experimental]
     pub fn socket_write_message(&mut self, msg: IRCMessage) -> IoResult<()> {
-        self.socket.write_str({
-            let mut to_send = msg.to_protocol_text();
-            to_send.push_str("\r\n");
-            to_send
-        }.as_slice())
+        util::write_message(&mut *self.socket, msg)
     }
 
 }

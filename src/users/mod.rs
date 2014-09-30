@@ -13,7 +13,18 @@ mod usermanager;
 /// Handles a user, sending and receiving awaiting messages
 #[experimental]
 pub fn handle_user(id: &Uuid, manager: &UserManager) {
-    // TODO
+    // first, send its messages to the user
+    let u = manager.get_user_by_uuid(id).unwrap();
+    let mut pu = u.private_handler();
+    while match pu.next_queued_message() {
+        Some(msg) => match pu.socket_write_message(msg) {
+            Ok(()) => true,
+            Err(_) => false // interrupt sending
+        },
+        None => false
+    } {}
+
+    // TODO : handle user input
 }
 
 /// Forcibly disconnect the user for a server shutdown.
