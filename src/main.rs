@@ -11,9 +11,10 @@ use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use uuid::Uuid;
 
-pub mod users;
 pub mod scheduling;
 pub mod settings;
+pub mod users;
+pub mod util;
 
 fn main() {
     //

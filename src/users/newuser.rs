@@ -9,6 +9,7 @@ use irccp::{IRCMessage, command, numericreply, ToIRCMessage};
 use irccp::from_ircmessage;
 
 use settings::ServerSettings;
+use util;
 
 /// A user with possibly missing data, not to be shared until
 /// initial negociation is done and a proper user is created.
@@ -38,11 +39,10 @@ impl NewUser {
 
     #[experimental]
     fn err_reply(&mut self, server: &ServerSettings, code: numericreply::NumericReply, suffix: &str) {
-        match self.socket.write_str(
-                    code.to_ircmessage()
-                        .with_prefix(server.name.as_slice()).ok().unwrap()
-                        .with_suffix(suffix).ok().unwrap()
-                        .to_protocol_text().as_slice()) {
+        match util::write_message(&mut self.socket,
+                code.to_ircmessage()
+                    .with_prefix(server.name.as_slice()).ok().unwrap()
+                    .with_suffix(suffix).ok().unwrap()) {
             Err(_) => { self.zombie = true; },
             _ => {}
         }
