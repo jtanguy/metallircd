@@ -54,17 +54,18 @@ pub fn spawn_newclients_handler(serverconf: &Arc<ServerSettings>,
                 for mut u in inc_list.into_iter() {
                     u.step_negociate(&*my_serverconf);
                     if u.is_ready() {
-                        match my_manager.write().insert(u) {
+                        let mut manager_handle = my_manager.write();
+                        match manager_handle.insert(u) {
                             Ok(id) => {
                                 // user was successfully inserted
-                                let read_handle = my_manager.read();
-                                let my_user = read_handle.get_user_by_uuid(&id).unwrap();
+                                let my_user = manager_handle.get_user_by_uuid(&id).unwrap();
                                 // welcome the new user
                                 my_user.push_message(
                                     numericreply::RPL_WELCOME.to_ircmessage()
                                         .with_prefix(my_serverconf.name.as_slice()).unwrap()
                                         .with_suffix(my_user.get_fullname().as_slice()).unwrap()
                                 );
+                                println!("New user {} with UUID {}.", my_user.get_fullname(), id);
                                 my_torecycle.push(id);
                             },
                             Err(mut nu) => {
