@@ -38,10 +38,11 @@ impl NewUser {
     }
 
     #[experimental]
-    fn err_reply(&mut self, server: &ServerSettings, code: numericreply::NumericReply, suffix: &str) {
+    fn err_reply(&mut self, server: &ServerSettings, code: numericreply::NumericReply, arg: &str, suffix: &str) {
         match util::write_message(&mut self.socket,
                 code.to_ircmessage()
                     .with_prefix(server.name.as_slice()).ok().unwrap()
+                    .add_arg(arg).ok().unwrap()
                     .with_suffix(suffix).ok().unwrap()) {
             Err(_) => { self.zombie = true; },
             _ => {}
@@ -63,11 +64,17 @@ impl NewUser {
                         self.hostname = Some(hostname);
                     },
                     Ok(command::NICK(nick)) => {
-                        self.nickname = Some(nick);
+                        if util::check_nick(nick.as_slice()) {
+                            self.nickname = Some(nick);
+                        } else {
+                            self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME,
+                               nick.as_slice(), "Erroneous nickname.");
+                        }
                     },
                     Err(irccp::TooFewParameters) => self.err_reply(server,
                                                                    numericreply::ERR_NEEDMOREPARAMS,
-                                                                   msg.command.as_slice()),
+                                                                   msg.command.as_slice(),
+                                                                   "Not enough parameters."),
                     // at this stage, ignore everithing else
                     _ => {}
                 },
@@ -80,6 +87,7 @@ impl NewUser {
                 // not valid UTF8 ?
                 io::InvalidInput => self.err_reply(server,
                                                    numericreply::ERR_UNKNOWNCOMMAND,
+                                                   "UTF8-required",
                                                    "Only UTF8 input is supported."),
                 // other errors means death, I guess ?
                 // TODO : be sure of it
@@ -98,7 +106,7 @@ impl NewUser {
     #[experimental]
     pub fn report_unavailable_nick(&mut self, server: &ServerSettings) {
         let oldnick = self.nickname.take().unwrap();
-        self.err_reply(server, numericreply::ERR_NICKNAMEINUSE, oldnick.as_slice());
+        self.err_reply(server, numericreply::ERR_NICKNAMEINUSE, oldnick.as_slice(), "Nickname is already in use.");
         self.nickname = None;
     }
 
