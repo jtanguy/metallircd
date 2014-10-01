@@ -2,14 +2,14 @@
 name = "metallircd"
 version = "0.0.1"
 dependencies = [
- "irccp 0.0.1 (git+https://github.com/metallirc/irccp-rs.git#b246005c3377031502a25a48167604491c274912)",
+ "irccp 0.0.1 (git+https://github.com/metallirc/irccp-rs.git#91a9621bece78d6f0b707f9dbed6d701e308c8f1)",
  "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git#c3041068f413a5e46d795d21a346072794593839)",
 ]
 
 [[package]]
 name = "irccp"
 version = "0.0.1"
-source = "git+https://github.com/metallirc/irccp-rs.git#b246005c3377031502a25a48167604491c274912"
+source = "git+https://github.com/metallirc/irccp-rs.git#91a9621bece78d6f0b707f9dbed6d701e308c8f1"
 
 [[package]]
 name = "uuid"
