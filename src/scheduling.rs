@@ -156,10 +156,12 @@ pub fn spawn_clients_recycler(serverconf: &Arc<ServerSettings>,
                             users::recycle_user(&id, &mut *my_manager.write());
                         } else {
                             // this user is disconnected, free it
-                            if my_manager.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie()) {
+                            let is_zombie = my_manager.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie());
+                            if is_zombie {
                                 users::recycle_user(&id, &mut *my_manager.write());
+                            } else {
+                                my_recycled.push(id);
                             }
-                            my_recycled.push(id);
                         }
 
                     }
