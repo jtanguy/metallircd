@@ -107,7 +107,7 @@ pub fn spawn_clients_handlers(serverconf: &Arc<ServerSettings>,
                         match my_next_user.steal() {
                             deque::Data(id) => {
                                 if *my_shutdown.read() {
-                                    users::disconnect_user(&id, &*my_manager.read());
+                                    users::disconnect_user(&id, &*my_manager.read(), "Server shutdown.", &*my_serverconf);
                                 } else {
                                     users::handle_user(&id, &*my_manager.read());
                                 }
@@ -151,12 +151,12 @@ pub fn spawn_clients_recycler(serverconf: &Arc<ServerSettings>,
                     Some(id) => {
                         if *my_shutdown.read() {
                             // just in case
-                            users::disconnect_user(&id, &*my_manager.read());
+                            users::disconnect_user(&id, &*my_manager.read(), "Server shutdown.", &*my_serverconf);
                             // then delete
                             users::recycle_user(&id, &mut *my_manager.write());
                         } else {
                             // this user is disconnected, free it
-                            if my_manager.read().get_user_by_uuid(&id).map_or(true, |u| u.zombie) {
+                            if my_manager.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie()) {
                                 users::recycle_user(&id, &mut *my_manager.write());
                             }
                             my_recycled.push(id);

@@ -95,4 +95,12 @@ impl UserManager {
         self.users.is_empty()
     }
 
+    #[experimental]
+    pub fn del_user(&mut self, id: &Uuid) {
+        match self.users.pop(id) {
+            Some(user_data) => { self.nicks.pop(&user_data.nickname); }
+            None => {}
+        }
+    }
+
 }

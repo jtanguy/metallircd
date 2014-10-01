@@ -4,7 +4,7 @@
 
 use std::io::{BufferedStream, IoResult, IoError};
 use std::io::net::tcp::TcpStream;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, RWLock};
 use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use irccp::IRCMessage;
@@ -22,7 +22,7 @@ pub struct UserData {
     pub username: String,
     pub hostname: String,
     /// is this user disconnected ?
-    pub zombie: bool
+    zombie: RWLock<bool>
 }
 
 /// Private handler for this user_data
@@ -59,6 +59,12 @@ impl<'a> PrivateUserDataHandler<'a> {
         util::write_message(&mut *self.socket, msg)
     }
 
+    /// Marks a client as zombie, to be recycled.
+    #[experimental]
+    pub fn zombify(&mut self) {
+        *self.data.zombie.write() = true
+    }
+
 }
 
 #[experimental]
@@ -73,7 +79,7 @@ impl UserData {
             nickname: nick,
             username: username,
             hostname: hostname,
-            zombie: false
+            zombie: RWLock::new(false)
         }
     }
 
@@ -101,4 +107,8 @@ impl UserData {
         result
     }
 
+    /// Is this user zombified ?
+    pub fn is_zombie(&self) -> bool {
+        *self.zombie.read()
+    }
 }
