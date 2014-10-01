@@ -6,6 +6,8 @@ pub use self::newuser::NewUser;
 
 use settings::ServerSettings;
 
+use std::io;
+
 use irccp::{command, numericreply, ToIRCMessage};
 
 use uuid::Uuid;
@@ -48,7 +50,16 @@ pub fn handle_user(id: &Uuid, manager: &UserManager, serverconf: &ServerSettings
             act => { return act; }
         },
         // TODO proper error handling
-        Err(_) => false
+        Err(e) => {
+            if e.kind == io::TimedOut {
+                // nothing, it's normal
+            } else {
+                // connection error, zombify
+                pu.zombify()
+            }
+            // in all cases, stop looping
+            false
+        }
     } {}
 
     return Nothing;
