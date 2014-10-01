@@ -79,14 +79,14 @@ impl UserManager {
     /// Fails if the uuid does not exists.
     /// Returns false and does nothing if the new nick was already in use.
     #[experimental]
-    pub fn change_nick(&mut self, id: Uuid, new_nick: String) -> bool {
+    pub fn change_nick(&mut self, id: &Uuid, new_nick: &String) -> bool {
         let lower_new_nick = util::nick_to_lower(new_nick.as_slice());
         if self.nicks.contains_key(&lower_new_nick) { return false }
 
-        let user = self.users.get_mut(&id);
-        let old_nick = ::std::mem::replace(&mut user.nickname, new_nick);
+        let user = self.users.get_mut(id);
+        let old_nick = ::std::mem::replace(&mut user.nickname, new_nick.clone());
         let _ = self.nicks.remove(&util::nick_to_lower(old_nick.as_slice()));
-        self.nicks.insert(lower_new_nick, id);
+        self.nicks.insert(lower_new_nick, id.clone());
         true
     }
 

@@ -45,7 +45,7 @@ impl<'a> PrivateUserDataHandler<'a> {
     #[experimental]
     pub fn socket_read_message(&mut self) -> IoResult<IRCMessage> {
         match self.socket.read_line() {
-            Ok(txt) => match from_str::<IRCMessage>(txt.as_slice()) {
+            Ok(txt) => match from_str::<IRCMessage>(txt.as_slice().lines_any().next().unwrap()) {
                 Some(msg) => Ok(msg),
                 None => Err(IoError::from_errno(22u, false)), // InvalidInput
             },

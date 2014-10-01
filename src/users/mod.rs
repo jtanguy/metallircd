@@ -6,17 +6,30 @@ pub use self::newuser::NewUser;
 
 use settings::ServerSettings;
 
-use irccp::{command, ToIRCMessage};
+use irccp::{command, numericreply, ToIRCMessage};
 
 use uuid::Uuid;
 
 mod newuser;
 mod user;
 mod usermanager;
+mod input_handling;
+
+/// Special actions to be performed by the recycler thread
+#[experimental]
+#[deriving(PartialEq)]
+pub enum RecyclingAction {
+    /// Nothing to do
+    Nothing,
+    /// a nick change is requested
+    ChangeNick(String),
+    /// the user should be zombified
+    Zombify
+}
 
 /// Handles a user, sending and receiving awaiting messages
 #[experimental]
-pub fn handle_user(id: &Uuid, manager: &UserManager) {
+pub fn handle_user(id: &Uuid, manager: &UserManager, serverconf: &ServerSettings) -> RecyclingAction {
     // first, send its messages to the user
     let u = manager.get_user_by_uuid(id).unwrap();
     let mut pu = u.private_handler();
@@ -28,7 +41,17 @@ pub fn handle_user(id: &Uuid, manager: &UserManager) {
         None => false
     } {}
 
-    // TODO : handle user input
+    while match pu.socket_read_message() {
+        Ok(msg) => match input_handling::handle_command(u, msg, manager, serverconf) {
+            Zombify => { pu.zombify(); return Nothing; },
+            Nothing => true,
+            act => { return act; }
+        },
+        // TODO proper error handling
+        Err(_) => false
+    } {}
+
+    return Nothing;
 }
 
 /// Forcibly disconnect the user for a server shutdown.
@@ -45,9 +68,33 @@ pub fn disconnect_user(id: &Uuid, manager: &UserManager, reason: &str, servercon
     pu.zombify();
 }
 
+pub fn recycle_user(id: &Uuid, action: RecyclingAction, manager: &mut UserManager, serverconf: &ServerSettings) {
+    match action {
+        ChangeNick(new_nick) => {
+            let old_name = manager.get_user_by_uuid(id).unwrap().get_fullname();
+            let success = manager.change_nick(id, &new_nick);
+            if success {
+                manager.get_user_by_uuid(id).unwrap().push_message(
+                    command::NICK(new_nick).to_ircmessage()
+                        .with_prefix(old_name.as_slice()).ok().unwrap()
+                );
+            } else {
+                manager.get_user_by_uuid(id).unwrap().push_message(
+                    numericreply::ERR_NICKNAMEINUSE.to_ircmessage()
+                        .with_prefix(serverconf.name.as_slice()).ok().unwrap()
+                        .add_arg(new_nick.as_slice()).ok().unwrap()
+                        .with_suffix("Nickname is already in use.").ok().unwrap()
+                );
+            }
+        },
+        _ => {}
+    }
+}
+
 /// Recycles a disconnected user.
 #[experimental]
-pub fn recycle_user(id: &Uuid, manager: &mut UserManager) {
+pub fn destroy_user(id: &Uuid, manager: &mut UserManager) {
+    println!("Recycling user {}", id);
     manager.del_user(id);
     // TODO save historyfor WHOWAS
 }

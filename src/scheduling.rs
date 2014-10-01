@@ -24,7 +24,7 @@ pub fn spawn_newclients_handler(serverconf: &Arc<ServerSettings>,
                                 mut acceptor: TcpAcceptor,
                                 shutdown: &Arc<RWLock<bool>>,
                                 usermanager: &Arc<RWLock<users::UserManager>>,
-                                torecycle: &Arc<MPSCQueue<Uuid>>)
+                                torecycle: &Arc<MPSCQueue<(Uuid, users::RecyclingAction)>>)
                                 -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named("New Clients Handler").try_future({
         // first, get handles to what we will need
@@ -66,7 +66,7 @@ pub fn spawn_newclients_handler(serverconf: &Arc<ServerSettings>,
                                         .with_suffix(my_user.get_fullname().as_slice()).unwrap()
                                 );
                                 println!("New user {} with UUID {}.", my_user.get_fullname(), id);
-                                my_torecycle.push(id);
+                                my_torecycle.push((id, users::Nothing));
                             },
                             Err(mut nu) => {
                                 // nick was already in use !
@@ -87,7 +87,7 @@ pub fn spawn_newclients_handler(serverconf: &Arc<ServerSettings>,
 pub fn spawn_clients_handlers(serverconf: &Arc<ServerSettings>,
                               shutdown: &Arc<RWLock<bool>>,
                               usermanager: &Arc<RWLock<users::UserManager>>,
-                              torecycle: &Arc<MPSCQueue<Uuid>>,
+                              torecycle: &Arc<MPSCQueue<(Uuid, users::RecyclingAction)>>,
                               next_user: &Stealer<Uuid>)
                               -> Vec<Future<Result<(), Box<Any + Send>>>> {
 
@@ -106,12 +106,13 @@ pub fn spawn_clients_handlers(serverconf: &Arc<ServerSettings>,
                     loop {
                         match my_next_user.steal() {
                             deque::Data(id) => {
-                                if *my_shutdown.read() {
+                                let action = if *my_shutdown.read() {
                                     users::disconnect_user(&id, &*my_manager.read(), "Server shutdown.", &*my_serverconf);
+                                    users::Nothing
                                 } else {
-                                    users::handle_user(&id, &*my_manager.read());
-                                }
-                                my_torecycle.push(id);
+                                    users::handle_user(&id, &*my_manager.read(), &*my_serverconf)
+                                };
+                                my_torecycle.push((id, action));
                             }
                             _ => if *my_shutdown.read() {
                                 return;
@@ -134,7 +135,7 @@ pub fn spawn_clients_handlers(serverconf: &Arc<ServerSettings>,
 pub fn spawn_clients_recycler(serverconf: &Arc<ServerSettings>,
                               shutdown: &Arc<RWLock<bool>>,
                               usermanager: &Arc<RWLock<users::UserManager>>,
-                              torecycle: &Arc<MPSCQueue<Uuid>>,
+                              torecycle: &Arc<MPSCQueue<(Uuid, users::RecyclingAction)>>,
                               recycled: Worker<Uuid>)
                               -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named("Client recycler").try_future({
@@ -148,18 +149,21 @@ pub fn spawn_clients_recycler(serverconf: &Arc<ServerSettings>,
         proc() {
             loop {
                 match my_torecycle.casual_pop() {
-                    Some(id) => {
+                    Some((id, action)) => {
                         if *my_shutdown.read() {
                             // just in case
                             users::disconnect_user(&id, &*my_manager.read(), "Server shutdown.", &*my_serverconf);
                             // then delete
-                            users::recycle_user(&id, &mut *my_manager.write());
+                            users::destroy_user(&id, &mut *my_manager.write());
                         } else {
                             // this user is disconnected, free it
                             let is_zombie = my_manager.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie());
                             if is_zombie {
-                                users::recycle_user(&id, &mut *my_manager.write());
+                                users::destroy_user(&id, &mut *my_manager.write());
+                            } else if action == users::Nothing {
+                                my_recycled.push(id);
                             } else {
+                                users::recycle_user(&id, action, &mut *my_manager.write(), &*my_serverconf);
                                 my_recycled.push(id);
                             }
                         }
