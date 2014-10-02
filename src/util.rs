@@ -23,7 +23,7 @@ pub fn check_nick(nick: &str) -> bool {
     if nick.chars().next().unwrap().is_digit() { return false; }
     // only, letter, digit, or []{}\|^
     for c in nick.chars() {
-        if !c.is_alphanumeric() && !"{}|^[]\\".contains_char(c) { return false; }
+        if !c.is_alphanumeric() && !"{}|^[]\\-_`".contains_char(c) { return false; }
     }
     true
 }
