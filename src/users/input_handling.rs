@@ -26,8 +26,10 @@ fn dispatch_msg(from: String, to: String, msg: String, manager: &UserManager, no
 
 pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, serverconf: &ServerSettings) -> RecyclingAction {
     match from_ircmessage::<command::Command>(&msg) {
-        // Commands
+        // == Commands ==
+        // QUIT
         Ok(command::QUIT(_)) => super::Zombify,
+        // NICK
         Ok(command::NICK(nick)) => {
             if util::check_nick(nick.as_slice()) {
                 if nick != me.nickname { super::ChangeNick(nick) } else { super::Nothing }
@@ -41,6 +43,22 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                 super::Nothing
             }
         },
+        // PING
+        Ok(command::PING(from, target)) => {
+            match target {
+                None => {
+                    // just bounce back the content to client
+                    me.push_message(command::PONG(from, None).to_ircmessage());
+                },
+                Some(to) => if to == serverconf.name {
+                    me.push_message(command::PONG(to, Some(from)).to_ircmessage());
+                } else {
+                    // TODO handle ping forward to other servers
+                }
+            }
+            super::Nothing
+        },
+        // Messages
         Ok(command::PRIVMSG(target, msg)) => {
             dispatch_msg(me.get_fullname(), target, msg, manager, false);
             super::Nothing
@@ -49,7 +67,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
             dispatch_msg(me.get_fullname(), target, msg, manager, true);
             super::Nothing
         },
-        // Errors
+        // == Errors ==
         Err(irccp::TooFewParameters) => {
             me.push_message(
                 numericreply::ERR_NEEDMOREPARAMS.to_ircmessage()
@@ -67,7 +85,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
             super::Nothing
         }
         Err(irccp::OtherError(_)) => { /* nothing for now */ super::Nothing },
-        // Todo
+        // == TODO ==
         Ok(_) => {
             me.push_message(
                 numericreply::ERR_UNKNOWNCOMMAND.to_ircmessage()
