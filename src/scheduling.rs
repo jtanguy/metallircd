@@ -63,7 +63,11 @@ pub fn spawn_newclients_handler(serverconf: &Arc<ServerSettings>,
                                 my_user.push_message(
                                     numericreply::RPL_WELCOME.to_ircmessage()
                                         .with_prefix(my_serverconf.name.as_slice()).unwrap()
-                                        .with_suffix(my_user.get_fullname().as_slice()).unwrap()
+                                        .add_arg(my_user.nickname.as_slice()).ok().unwrap()
+                                        .with_suffix(
+                                            format!("Welcome to metallirc IRC Network {}",
+                                                    my_user.get_fullname().as_slice()).as_slice()
+                                        ).ok().unwrap()
                                 );
                                 println!("New user {} with UUID {}.", my_user.get_fullname(), id);
                                 my_torecycle.push((id, users::Nothing));
