@@ -82,11 +82,23 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
         },
         // Messages
         Ok(command::PRIVMSG(target, msg)) => {
-            dispatch_msg(me, &my_id, target, msg, srv, false);
+            if !dispatch_msg(me, &my_id, target.clone(), msg, srv, false) {
+                me.push_message(
+                    numericreply::ERR_NOSUCHNICK.to_ircmessage()
+                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+                        .with_suffix(format!("{} : No such nick/channel.", target).as_slice()).ok().unwrap()
+                );
+            }
             Nothing
         },
         Ok(command::NOTICE(target, msg)) => {
-            dispatch_msg(me, &my_id, target, msg, srv, true);
+            if !dispatch_msg(me, &my_id, target.clone(), msg, srv, true) {
+                me.push_message(
+                    numericreply::ERR_NOSUCHNICK.to_ircmessage()
+                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+                        .with_suffix(format!("{} : No such nick/channel.", target).as_slice()).ok().unwrap()
+                );
+            }
             Nothing
         },
         // Channel interaction
