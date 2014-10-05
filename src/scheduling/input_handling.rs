@@ -60,8 +60,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                 me.push_message(
                     numericreply::ERR_ERRONEUSNICKNAME.to_ircmessage()
                         .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .add_arg(nick.as_slice()).ok().unwrap()
-                        .with_suffix("Erroneous nickname.").ok().unwrap()
+                        .with_suffix(format!("{} : Erroneous nickname.", nick).as_slice()).ok().unwrap()
                 );
                 Nothing
             }

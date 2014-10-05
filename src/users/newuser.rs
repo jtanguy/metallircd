@@ -67,8 +67,8 @@ impl NewUser {
                         if util::check_label(nick.as_slice()) {
                             self.nickname = Some(nick);
                         } else {
-                            self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME,
-                               nick.as_slice(), "Erroneous nickname.");
+                            self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME, "",
+                               format!("{} : Erroneous nickname.", nick).as_slice());
                         }
                     },
                     Err(irccp::TooFewParameters) => self.err_reply(server,
