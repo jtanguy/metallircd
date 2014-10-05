@@ -64,7 +64,7 @@ impl NewUser {
                         self.hostname = Some(hostname);
                     },
                     Ok(command::NICK(nick)) => {
-                        if util::check_nick(nick.as_slice()) {
+                        if util::check_label(nick.as_slice()) {
                             self.nickname = Some(nick);
                         } else {
                             self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME,

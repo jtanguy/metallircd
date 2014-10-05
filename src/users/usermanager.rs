@@ -37,7 +37,7 @@ impl UserManager {
         if user.nickname.is_none() || user.username.is_none() || user.username.is_none() {
             Err(user)
         } else {
-            let lower_nick = util::nick_to_lower(user.nickname.as_ref().unwrap().as_slice());
+            let lower_nick = util::label_to_lower(user.nickname.as_ref().unwrap().as_slice());
             if self.nicks.contains_key(&lower_nick) {
                 Err(user)
             } else { // all is ok
@@ -65,14 +65,14 @@ impl UserManager {
 
     #[experimental]
     pub fn get_uuid_of_nickname(&self, nick: &String) -> Option<Uuid> {
-        self.nicks.find(&util::nick_to_lower(nick.as_slice())).map(|id| id.clone())
+        self.nicks.find(&util::label_to_lower(nick.as_slice())).map(|id| id.clone())
     }
 
     #[experimental]
     pub fn get_user_by_nickname<'a>(&'a self, nick: &String) -> Option<&'a UserData> {
         // we should *never* have a nick for a unexistent user
         // so .unwrap() should *never* fail
-        self.nicks.find(&util::nick_to_lower(nick.as_slice())).map(|id| self.users.find(id).unwrap())
+        self.nicks.find(&util::label_to_lower(nick.as_slice())).map(|id| self.users.find(id).unwrap())
     }
 
     /// Changes the nickname of given uuid.
@@ -80,12 +80,12 @@ impl UserManager {
     /// Returns false and does nothing if the new nick was already in use.
     #[experimental]
     pub fn change_nick(&mut self, id: &Uuid, new_nick: &String) -> bool {
-        let lower_new_nick = util::nick_to_lower(new_nick.as_slice());
+        let lower_new_nick = util::label_to_lower(new_nick.as_slice());
         if self.nicks.contains_key(&lower_new_nick) { return false }
 
         let user = self.users.get_mut(id);
         let old_nick = ::std::mem::replace(&mut user.nickname, new_nick.clone());
-        let _ = self.nicks.remove(&util::nick_to_lower(old_nick.as_slice()));
+        let _ = self.nicks.remove(&util::label_to_lower(old_nick.as_slice()));
         self.nicks.insert(lower_new_nick, id.clone());
         true
     }

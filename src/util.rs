@@ -14,9 +14,9 @@ pub fn write_message(socket: &mut BufferedStream<TcpStream>, msg: IRCMessage) ->
     Ok(())
 }
 
-/// Checks if an nickname is valid
+/// Checks if a label (nick or chan name) is valid
 #[experimental]
-pub fn check_nick(nick: &str) -> bool {
+pub fn check_label(nick: &str) -> bool {
     // only ascii nicks are allowed
     if nick.len() == 0 || !nick.is_ascii() { return false; }
     // digit is forbidden in first place
@@ -28,10 +28,10 @@ pub fn check_nick(nick: &str) -> bool {
     true
 }
 
-/// Returns the lower-case version of a nick
-/// Assumes the nick is valid.
+/// Returns the lower-case version of a label, nick or chan name.
+/// Assumes it is valid.
 #[experimental]
-pub fn nick_to_lower(nick: &str) -> String {
+pub fn label_to_lower(nick: &str) -> String {
     nick.chars().map(|c| {
         match c {
             '[' => '{',

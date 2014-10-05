@@ -2,10 +2,10 @@
 
 #![experimental]
 
-use super::RecyclingAction;
-use super::usermanager::UserManager;
-use super::user::UserData;
+use super::users_handling::{Zombify, ChangeNick, Nothing};
+use super::users_handling::RecyclingAction;
 
+use users::{UserManager, UserData};
 use settings::ServerSettings;
 use util;
 
@@ -28,11 +28,11 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
     match from_ircmessage::<command::Command>(&msg) {
         // == Commands ==
         // QUIT
-        Ok(command::QUIT(_)) => super::Zombify,
+        Ok(command::QUIT(_)) => Zombify,
         // NICK
         Ok(command::NICK(nick)) => {
-            if util::check_nick(nick.as_slice()) {
-                if nick != me.nickname { super::ChangeNick(nick) } else { super::Nothing }
+            if util::check_label(nick.as_slice()) {
+                if nick != me.nickname { ChangeNick(nick) } else { Nothing }
             } else {
                 me.push_message(
                     numericreply::ERR_ERRONEUSNICKNAME.to_ircmessage()
@@ -40,7 +40,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                         .add_arg(nick.as_slice()).ok().unwrap()
                         .with_suffix("Erroneous nickname.").ok().unwrap()
                 );
-                super::Nothing
+                Nothing
             }
         },
         // PING
@@ -56,16 +56,16 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                     // TODO handle ping forward to other servers
                 }
             }
-            super::Nothing
+            Nothing
         },
         // Messages
         Ok(command::PRIVMSG(target, msg)) => {
             dispatch_msg(me.get_fullname(), target, msg, manager, false);
-            super::Nothing
+            Nothing
         },
         Ok(command::NOTICE(target, msg)) => {
             dispatch_msg(me.get_fullname(), target, msg, manager, true);
-            super::Nothing
+            Nothing
         },
         // == Errors ==
         Err(irccp::TooFewParameters) => {
@@ -74,7 +74,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not enough parameters.").ok().unwrap()
             );
-            super::Nothing
+            Nothing
         },
         Err(irccp::UnknownCommand) => {
             me.push_message(
@@ -82,9 +82,9 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Unknown command.").ok().unwrap()
             );
-            super::Nothing
+            Nothing
         }
-        Err(irccp::OtherError(_)) => { /* nothing for now */ super::Nothing },
+        Err(irccp::OtherError(_)) => { /* nothing for now */ Nothing },
         // == TODO ==
         Ok(_) => {
             me.push_message(
@@ -92,7 +92,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not yet implemented.").ok().unwrap()
             );
-            super::Nothing
+            Nothing
         }
     }
 }

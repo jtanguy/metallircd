@@ -36,7 +36,7 @@ fn main() {
     //
     let shutdown = Arc::new(RWLock::new(false));
     let user_manager = Arc::new(RWLock::new(users::UserManager::new()));
-    let user_torecycle_queue: Arc<MPSCQueue<(Uuid, users::RecyclingAction)>> = Arc::new(MPSCQueue::new());
+    let user_torecycle_queue: Arc<MPSCQueue<(Uuid, scheduling::RecyclingAction)>> = Arc::new(MPSCQueue::new());
 
     let user_recycled_buffer: deque::BufferPool<Uuid> = deque::BufferPool::new();
     let (user_recycled_worker, user_recycled_stealer) = user_recycled_buffer.deque();
