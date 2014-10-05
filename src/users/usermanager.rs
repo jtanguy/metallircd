@@ -41,11 +41,12 @@ impl UserManager {
             if self.nicks.contains_key(&lower_nick) {
                 Err(user)
             } else { // all is ok
-
+                // TODO auto-detect host
                 let full_user = UserData::new(user.socket,
                                               user.nickname.unwrap(),
                                               user.username.unwrap(),
-                                              user.hostname.unwrap());
+                                              "metallirc".to_string(),
+                                              user.realname.unwrap());
 
                 let mut id = Uuid::new_v4();
                 // better safe than sorry ?

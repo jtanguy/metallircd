@@ -21,6 +21,7 @@ pub struct UserData {
     pub nickname: String,
     pub username: String,
     pub hostname: String,
+    pub realname: String,
     /// is this user disconnected ?
     zombie: RWLock<bool>
 }
@@ -72,13 +73,14 @@ impl UserData {
 
     #[experimental]
     /// Creates a new user
-    pub fn new(tcpsocket: BufferedStream<TcpStream>, nick: String, username: String, hostname: String) -> UserData {
+    pub fn new(tcpsocket: BufferedStream<TcpStream>, nick: String, username: String, hostname: String, realname: String) -> UserData {
         UserData {
             socket: Mutex::new(tcpsocket),
             queue: MPSCQueue::new(),
             nickname: nick,
             username: username,
             hostname: hostname,
+            realname: realname,
             zombie: RWLock::new(false)
         }
     }

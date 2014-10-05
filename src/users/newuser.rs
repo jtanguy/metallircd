@@ -18,7 +18,7 @@ pub struct NewUser {
     pub socket: BufferedStream<TcpStream>,
     pub nickname: Option<String>,
     pub username: Option<String>,
-    pub hostname: Option<String>,
+    pub realname: Option<String>,
     pub zombie: bool
 }
 
@@ -32,7 +32,7 @@ impl NewUser {
             socket: socket,
             nickname: None,
             username: None,
-            hostname: None,
+            realname: None,
             zombie: false
         }
     }
@@ -57,11 +57,11 @@ impl NewUser {
             // got a line
             Ok(txt) => match from_str::<IRCMessage>(txt.as_slice().lines_any().next().unwrap()) {
                 Some(msg) => match from_ircmessage::<command::Command>(&msg) {
-                    Ok(command::USER(username, _, hostname)) => {
+                    Ok(command::USER(username, _, realname)) => {
                         // TODO : check validity
                         // TODO : allow only once
                         self.username = Some(username);
-                        self.hostname = Some(hostname);
+                        self.realname = Some(realname);
                     },
                     Ok(command::NICK(nick)) => {
                         if util::check_label(nick.as_slice()) {
@@ -99,7 +99,7 @@ impl NewUser {
     /// Checks whether the new user is ready to be promoted
     #[experimental]
     pub fn is_ready(&self) -> bool {
-        self.nickname.is_some() && self.username.is_some() && self.hostname.is_some()
+        self.nickname.is_some() && self.username.is_some() && self.realname.is_some()
     }
 
     /// Invalidates the nick with ad "nick already in use" message
