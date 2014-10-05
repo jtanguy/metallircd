@@ -4,9 +4,9 @@
 
 use super::users_handling::{Zombify, ChangeNick, Nothing};
 use super::users_handling::RecyclingAction;
+use super::ServerData;
 
 use users::{UserManager, UserData};
-use settings::ServerSettings;
 use util;
 
 use irccp;
@@ -24,7 +24,7 @@ fn dispatch_msg(from: String, to: String, msg: String, manager: &UserManager, no
     }
 }
 
-pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, serverconf: &ServerSettings) -> RecyclingAction {
+pub fn handle_command(me: &UserData, msg: IRCMessage, srv: &ServerData) -> RecyclingAction {
     match from_ircmessage::<command::Command>(&msg) {
         // == Commands ==
         // QUIT
@@ -36,7 +36,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
             } else {
                 me.push_message(
                     numericreply::ERR_ERRONEUSNICKNAME.to_ircmessage()
-                        .with_prefix(serverconf.name.as_slice()).ok().unwrap()
+                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
                         .add_arg(nick.as_slice()).ok().unwrap()
                         .with_suffix("Erroneous nickname.").ok().unwrap()
                 );
@@ -50,7 +50,7 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
                     // just bounce back the content to client
                     me.push_message(command::PONG(from, None).to_ircmessage());
                 },
-                Some(to) => if to == serverconf.name {
+                Some(to) => if to == srv.settings.read().name {
                     me.push_message(command::PONG(to, Some(from)).to_ircmessage());
                 } else {
                     // TODO handle ping forward to other servers
@@ -60,11 +60,11 @@ pub fn handle_command(me: &UserData, msg: IRCMessage, manager: &UserManager, ser
         },
         // Messages
         Ok(command::PRIVMSG(target, msg)) => {
-            dispatch_msg(me.get_fullname(), target, msg, manager, false);
+            dispatch_msg(me.get_fullname(), target, msg, &*srv.users.read(), false);
             Nothing
         },
         Ok(command::NOTICE(target, msg)) => {
-            dispatch_msg(me.get_fullname(), target, msg, manager, true);
+            dispatch_msg(me.get_fullname(), target, msg, &*srv.users.read(), true);
             Nothing
         },
         // == Errors ==
