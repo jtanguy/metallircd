@@ -35,7 +35,7 @@ pub fn handle_user(id: &Uuid, srv: &ServerData) -> RecyclingAction {
     } {}
 
     while match pu.socket_read_message() {
-        Ok(msg) => match input_handling::handle_command(u, msg, srv) {
+        Ok(msg) => match input_handling::handle_command(u, id.clone(), msg, srv) {
             Zombify => { pu.zombify(); return Nothing; },
             Nothing => true,
             act => { return act; }

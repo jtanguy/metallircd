@@ -2,6 +2,7 @@
 
 #![experimental]
 
+use channels::ChannelManager;
 use users::UserManager;
 use settings::ServerSettings;
 
@@ -19,6 +20,7 @@ mod procs;
 pub struct ServerData {
     pub settings: RWLock<ServerSettings>,
     pub users: RWLock<UserManager>,
+    pub channels: RWLock<ChannelManager>,
 
     pub queue_users_torecycle: MPSCQueue<(Uuid, users_handling::RecyclingAction)>,
 
@@ -32,6 +34,7 @@ impl ServerData {
         ServerData {
             settings: RWLock::new(settings),
             users: RWLock::new(UserManager::new()),
+            channels: RWLock::new(ChannelManager::new()),
             queue_users_torecycle: MPSCQueue::new(),
             signal_shutdown: RWLock::new(false)
         }

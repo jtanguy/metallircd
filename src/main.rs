@@ -6,6 +6,7 @@ extern crate uuid;
 use std::io::Listener;
 use std::io::net::tcp::TcpListener;
 
+pub mod channels;
 pub mod scheduling;
 pub mod settings;
 pub mod users;
