@@ -125,6 +125,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                 me.push_message(
                     numericreply::ERR_BADCHANMASK.to_ircmessage()
                         .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+                        .add_arg(me.nickname.as_slice()).ok().unwrap()
                         .with_suffix(format!("{} : Bad Channel name.", chan).as_slice()).ok().unwrap()
                 );
             }
@@ -148,6 +149,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
         Err(irccp::TooFewParameters) => {
             me.push_message(
                 numericreply::ERR_NEEDMOREPARAMS.to_ircmessage()
+                    .add_arg(me.nickname.as_slice()).ok().unwrap()
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not enough parameters.").ok().unwrap()
             );
@@ -156,6 +158,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
         Err(irccp::UnknownCommand) => {
             me.push_message(
                 numericreply::ERR_UNKNOWNCOMMAND.to_ircmessage()
+                    .add_arg(me.nickname.as_slice()).ok().unwrap()
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Unknown command.").ok().unwrap()
             );
@@ -166,6 +169,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
         Ok(_) => {
             me.push_message(
                 numericreply::ERR_UNKNOWNCOMMAND.to_ircmessage()
+                    .add_arg(me.nickname.as_slice()).ok().unwrap()
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not yet implemented.").ok().unwrap()
             );
