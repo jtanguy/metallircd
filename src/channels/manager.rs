@@ -11,6 +11,7 @@ use irccp::IRCMessage;
 use uuid::Uuid;
 
 use super::chan::Channel;
+use super::modes::MembershipMode;
 use util;
 use users::UserManager;
 
@@ -140,6 +141,15 @@ impl ChannelManager {
 			}
 		}
 		emptied
+	}
+
+	/// Returns the member list of a chan with their best mode, as an iterator.
+	#[experimental]
+	pub fn member_list(&self, chan: &String) -> Vec<(Uuid, MembershipMode)> {
+		match self.chans.find(chan) {
+			Some(ch) => ch.read().member_list(),
+			None => Vec::new()
+		}
 	}
 
 }

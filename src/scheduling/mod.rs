@@ -15,6 +15,7 @@ use uuid::Uuid;
 mod input_handling;
 mod users_handling;
 mod procs;
+mod replies;
 
 #[experimental]
 pub struct ServerData {

@@ -2,6 +2,7 @@
 
 #![experimental]
 
+use super::replies::send_names;
 use super::users_handling::{Zombify, ChangeNick, Nothing};
 use super::users_handling::RecyclingAction;
 use super::ServerData;
@@ -118,6 +119,13 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                         .with_prefix(me.get_fullname().as_slice()).ok().unwrap(),
                     None
                 );
+                send_names(me, &chan, srv);
+                me.push_message(
+                    numericreply::RPL_ENDOFNAMES.to_ircmessage()
+                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+                        .with_suffix("End of NAMES list.").ok().unwrap()
+                );
+
             } else {
                 // invalid chan name
                 me.push_message(
