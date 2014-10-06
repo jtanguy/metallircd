@@ -169,6 +169,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not yet implemented.").ok().unwrap()
             );
+            println!("stub called : {}", msg.command);
             Nothing
         }
     }
