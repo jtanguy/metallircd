@@ -120,12 +120,6 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                     None
                 );
                 send_names(me, &chan, srv);
-                me.push_message(
-                    numericreply::RPL_ENDOFNAMES.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .with_suffix("End of NAMES list.").ok().unwrap()
-                );
-
             } else {
                 // invalid chan name
                 me.push_message(

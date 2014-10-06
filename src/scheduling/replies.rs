@@ -14,6 +14,7 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
 	let names = srv.channels.read().member_list(chan);
 	let msg = numericreply::RPL_NAMEREPLY.to_ircmessage()
 					.with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+					.add_arg(me.nickname.as_slice()).ok().unwrap()
 					.add_arg("=").ok().unwrap()
 					.add_arg(chan.as_slice()).ok().unwrap();
 	let mut buffer = String::new();
@@ -46,4 +47,11 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
 				msg.with_suffix(buffer.as_slice()).ok().unwrap()
 		);
 	}
+	me.push_message(
+        numericreply::RPL_ENDOFNAMES.to_ircmessage()
+            .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+            .add_arg(me.nickname.as_slice()).ok().unwrap()
+            .add_arg(chan.as_slice()).ok().unwrap()
+            .with_suffix("End of NAMES list.").ok().unwrap()
+    );
 }
