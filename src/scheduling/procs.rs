@@ -3,7 +3,7 @@
 use std::any::Any;
 use std::collections::DList;
 use std::io::{Acceptor, BufferedStream};
-use std::io::{File, Open, Write};
+use std::io::{File, Append, Write};
 use std::io::net::tcp::TcpAcceptor;
 use std::io::timer::sleep;
 use std::rt::thread::Thread;
@@ -159,7 +159,7 @@ pub fn spawn_logger(srv: Arc<ServerData>) -> Future<Result<(), Box<Any + Send>>>
 TaskBuilder::new().named("Logger").try_future({
         // the proc
         proc() {
-            let mut file = match File::open_mode(&srv.settings.read().logfile, Open, Write) {
+            let mut file = match File::open_mode(&srv.settings.read().logfile, Append, Write) {
                 Ok(f) => f,
                 Err(e) => fail!("Unable to open log file {} : {}",
                                     srv.settings.read().logfile.as_str().unwrap_or(""),
