@@ -8,7 +8,7 @@ use irccp;
 use irccp::{IRCMessage, command, numericreply, ToIRCMessage};
 use irccp::from_ircmessage;
 
-use settings::ServerSettings;
+use conf::ServerConf;
 use util;
 
 /// A user with possibly missing data, not to be shared until
@@ -38,7 +38,7 @@ impl NewUser {
     }
 
     #[experimental]
-    fn err_reply(&mut self, server: &ServerSettings, code: numericreply::NumericReply, arg: &str, suffix: &str) {
+    fn err_reply(&mut self, server: &ServerConf, code: numericreply::NumericReply, arg: &str, suffix: &str) {
         match util::write_message(&mut self.socket,
                 code.to_ircmessage()
                     .with_prefix(server.name.as_slice()).ok().unwrap()
@@ -52,7 +52,7 @@ impl NewUser {
     /// Read next message in negociation of new user.
     /// Returns whether the user is ready to be promoted to a real user or not.
     #[experimental]
-    pub fn step_negociate(&mut self, server: &ServerSettings) {
+    pub fn step_negociate(&mut self, server: &ServerConf) {
         match self.socket.read_line() {
             // got a line
             Ok(txt) => match from_str::<IRCMessage>(txt.as_slice().lines_any().next().unwrap()) {
@@ -104,7 +104,7 @@ impl NewUser {
 
     /// Invalidates the nick with ad "nick already in use" message
     #[experimental]
-    pub fn report_unavailable_nick(&mut self, server: &ServerSettings) {
+    pub fn report_unavailable_nick(&mut self, server: &ServerConf) {
         let oldnick = self.nickname.take().unwrap();
         self.err_reply(server, numericreply::ERR_NICKNAMEINUSE, oldnick.as_slice(), "Nickname is already in use.");
         self.nickname = None;

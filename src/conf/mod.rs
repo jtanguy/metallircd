@@ -1,10 +1,10 @@
-//! Setting module of the server.
+//! Configuration module of the server.
 
 #![experimental]
 
 use logging::LogLevel;
 
-pub struct ServerSettings {
+pub struct ServerConf {
     // generic
     pub name: String,
     pub address: String,

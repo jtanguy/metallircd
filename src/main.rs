@@ -8,9 +8,9 @@ use std::io::Listener;
 use std::io::net::tcp::TcpListener;
 
 pub mod channels;
+pub mod conf;
 pub mod logging;
 pub mod scheduling;
-pub mod settings;
 pub mod users;
 pub mod util;
 
@@ -18,7 +18,7 @@ fn main() {
     //
     // CONFIG
     //
-    let serverconfig = settings::ServerSettings {
+    let serverconfig = conf::ServerConf {
         name: "irc@foo.bar".to_string(),
         address: "127.0.0.1".to_string(),
         port: 6667,

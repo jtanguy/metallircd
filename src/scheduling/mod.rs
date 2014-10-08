@@ -4,7 +4,7 @@
 
 use channels::ChannelManager;
 use logging::Logger;
-use settings::ServerSettings;
+use conf::ServerConf;
 use users::UserManager;
 
 use std::io::net::tcp::TcpAcceptor;
@@ -20,7 +20,7 @@ mod replies;
 
 #[experimental]
 pub struct ServerData {
-    pub settings: RWLock<ServerSettings>,
+    pub settings: RWLock<ServerConf>,
     pub users: RWLock<UserManager>,
     pub channels: RWLock<ChannelManager>,
 
@@ -32,7 +32,7 @@ pub struct ServerData {
 #[experimental]
 impl ServerData {
 
-    pub fn new(settings: ServerSettings)-> ServerData {
+    pub fn new(settings: ServerConf)-> ServerData {
         let loglevel = settings.loglevel;
         ServerData {
             settings: RWLock::new(settings),
