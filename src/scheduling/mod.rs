@@ -3,8 +3,9 @@
 #![experimental]
 
 use channels::ChannelManager;
-use users::UserManager;
+use logging::Logger;
 use settings::ServerSettings;
+use users::UserManager;
 
 use std::io::net::tcp::TcpAcceptor;
 use std::sync::mpsc_queue::Queue as MPSCQueue;
@@ -23,8 +24,8 @@ pub struct ServerData {
     pub users: RWLock<UserManager>,
     pub channels: RWLock<ChannelManager>,
 
+    pub logger: Logger,
     pub queue_users_torecycle: MPSCQueue<(Uuid, users_handling::RecyclingAction)>,
-
     pub signal_shutdown: RWLock<bool>
 }
 
@@ -32,10 +33,12 @@ pub struct ServerData {
 impl ServerData {
 
     pub fn new(settings: ServerSettings)-> ServerData {
+        let loglevel = settings.loglevel;
         ServerData {
             settings: RWLock::new(settings),
             users: RWLock::new(UserManager::new()),
             channels: RWLock::new(ChannelManager::new()),
+            logger: Logger::new(loglevel),
             queue_users_torecycle: MPSCQueue::new(),
             signal_shutdown: RWLock::new(false)
         }
@@ -64,6 +67,11 @@ pub fn run_server(srv: ServerData, acceptor: TcpAcceptor) {
     // clients recycler
     thread_handles.push(
         procs::spawn_clients_recycler(arc_srv.clone(), user_recycled_worker)
+    );
+
+    // logger
+    thread_handles.push(
+        procs::spawn_logger(arc_srv.clone())
     );
 
     //

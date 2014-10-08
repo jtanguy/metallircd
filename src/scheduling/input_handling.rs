@@ -7,6 +7,7 @@ use super::users_handling::{Zombify, ChangeNick, Nothing};
 use super::users_handling::RecyclingAction;
 use super::ServerData;
 
+use logging::Warning;
 use users::UserData;
 use util;
 
@@ -173,7 +174,7 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                     .add_arg(msg.command.as_slice()).ok().unwrap()
                     .with_suffix("Not yet implemented.").ok().unwrap()
             );
-            println!("stub called : {}", msg.command);
+            srv.logger.log(Warning, format!("stub called : {}", msg.command));
             Nothing
         }
     }

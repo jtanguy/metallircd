@@ -51,8 +51,7 @@ impl ChannelManager {
 	pub fn join_create(&mut self, user: Uuid, chan: String) {
 		match self.chans.entry(util::label_to_lower(chan.as_slice())) {
 			Occupied(e) => e.get().write().join(user),
-			Vacant(e) => { 
-				println!("Creating channel {}", chan);
+			Vacant(e) => {
 				e.set(RWLock::new(Channel::new())).write().join(user)
 			},
 		}
@@ -87,7 +86,6 @@ impl ChannelManager {
 		let lower_chan = util::label_to_lower(chan.as_slice());
 		if self.chans.contains_key(&lower_chan)
 		   && self.chans.find(&lower_chan).unwrap().read().is_empty() {
-		   	println!("Destroying channel {}", chan);
 			self.chans.remove(&lower_chan)
 		} else {
 			false

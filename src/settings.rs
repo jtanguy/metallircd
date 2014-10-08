@@ -1,12 +1,18 @@
-//! Setting moduleof the server.
+//! Setting module of the server.
 
 #![experimental]
+
+use logging::LogLevel;
 
 pub struct ServerSettings {
     // generic
     pub name: String,
     pub address: String,
     pub port: u16,
+
+    // logs
+    pub loglevel: LogLevel,
+    pub logfile: Path,
 
     // sleep times:
     pub tcp_timout: u64,

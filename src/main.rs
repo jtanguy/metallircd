@@ -1,12 +1,14 @@
 //! metallircd
 
 extern crate irccp;
+extern crate time;
 extern crate uuid;
 
 use std::io::Listener;
 use std::io::net::tcp::TcpListener;
 
 pub mod channels;
+pub mod logging;
 pub mod scheduling;
 pub mod settings;
 pub mod users;
@@ -20,6 +22,9 @@ fn main() {
         name: "irc@foo.bar".to_string(),
         address: "127.0.0.1".to_string(),
         port: 6667,
+        //
+        loglevel: logging::Info,
+        logfile: Path::new("./metallirc.log"),
         //
         tcp_timout: 50,
         thread_handler_count: 2,

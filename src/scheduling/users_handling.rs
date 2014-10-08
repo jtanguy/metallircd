@@ -1,6 +1,8 @@
 use super::input_handling;
 use super::ServerData;
 
+use logging::Info;
+
 use std::io;
 
 use irccp::{command, numericreply, ToIRCMessage};
@@ -98,7 +100,7 @@ pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
 /// Recycles a disconnected user.
 #[experimental]
 pub fn destroy_user(id: &Uuid, srv: &ServerData) {
-    println!("Recycling user {}", id);
+    srv.logger.log(Info, format!("Recycling user {}", id));
     srv.users.write().del_user(id);
     // TODO save historyfor WHOWAS
 }

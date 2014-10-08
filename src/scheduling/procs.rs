@@ -3,6 +3,7 @@
 use std::any::Any;
 use std::collections::DList;
 use std::io::{Acceptor, BufferedStream};
+use std::io::{File, Open, Write};
 use std::io::net::tcp::TcpAcceptor;
 use std::io::timer::sleep;
 use std::rt::thread::Thread;
@@ -16,6 +17,7 @@ use irccp::{numericreply, ToIRCMessage};
 
 use uuid::Uuid;
 
+use logging::Info;
 use users;
 
 use super::ServerData;
@@ -62,7 +64,8 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                                     my_user.get_fullname().as_slice()).as_slice()
                                         ).ok().unwrap()
                                 );
-                                println!("New user {} with UUID {}.", my_user.get_fullname(), id);
+                                srv.logger.log(Info,
+                                    format!("New user {} with UUID {}.", my_user.get_fullname(), id));
                                 srv.queue_users_torecycle.push((id, users_handling::Nothing));
                             },
                             Err(mut nu) => {
@@ -146,6 +149,29 @@ pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Work
                         sleep(Duration::milliseconds(srv.settings.read().thread_sleep_time));
                     }
                 }
+                Thread::yield_now();
+            }
+        }
+    })
+}
+
+pub fn spawn_logger(srv: Arc<ServerData>) -> Future<Result<(), Box<Any + Send>>> {
+TaskBuilder::new().named("Logger").try_future({
+        // the proc
+        proc() {
+            let mut file = match File::open_mode(&srv.settings.read().logfile, Open, Write) {
+                Ok(f) => f,
+                Err(e) => fail!("Unable to open log file {} : {}",
+                                    srv.settings.read().logfile.as_str().unwrap_or(""),
+                                    e)
+            };
+            srv.logger.log(Info, format!("Initialised logging with level {}", srv.logger.level));
+            loop {
+                while match srv.logger.pop() {
+                    Some(line) => { let _ = file.write_line(line.as_slice()); true },
+                    None => false
+                } { /* empty loop body */}
+                let _ = file.datasync();
                 Thread::yield_now();
             }
         }
