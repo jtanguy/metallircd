@@ -8,7 +8,6 @@ use time::now;
 
 #[experimental]
 #[deriving(Show)]
-#[repr(u8)]
 pub enum LogLevel {
 	Error   = 0,
 	Warning = 1,

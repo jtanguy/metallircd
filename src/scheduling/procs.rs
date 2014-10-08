@@ -33,7 +33,7 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
             loop {
                 // There is no problem with brutally closing not-yet established connections.
                 if *srv.signal_shutdown.read() { let _ = acceptor.close_accept(); return }
-                acceptor.set_timeout(Some(srv.settings.read().thread_new_users_cnx_timeout));
+                acceptor.set_timeout(Some(50));
                 match acceptor.accept() {
                     Ok(mut socket) => {
                         // prepare the new connection
@@ -104,7 +104,7 @@ pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stea
                         return;
                     } else {
                         // there is nothing to do, sleep
-                        sleep(Duration::milliseconds(srv.settings.read().thread_sleep_time));
+                        sleep(Duration::milliseconds(50));
                     }
                 }
                 Thread::yield_now();
@@ -146,7 +146,7 @@ pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Work
                         return;
                     } else {
                         // there is nothing to do, sleep
-                        sleep(Duration::milliseconds(srv.settings.read().thread_sleep_time));
+                        sleep(Duration::milliseconds(50));
                     }
                 }
                 Thread::yield_now();
@@ -161,9 +161,12 @@ TaskBuilder::new().named("Logger").try_future({
         proc() {
             let mut file = match File::open_mode(&srv.settings.read().logfile, Append, Write) {
                 Ok(f) => f,
-                Err(e) => fail!("Unable to open log file {} : {}",
-                                    srv.settings.read().logfile.as_str().unwrap_or(""),
-                                    e)
+                Err(e) => {
+                    println!("Unable to open log file {} : {}",
+                                srv.settings.read().logfile.as_str().unwrap_or(""),
+                                e);
+                    return
+                }
             };
             srv.logger.log(Info, format!("Initialised logging with level {}", srv.logger.level));
             loop {
@@ -172,6 +175,7 @@ TaskBuilder::new().named("Logger").try_future({
                     None => false
                 } { /* empty loop body */}
                 let _ = file.datasync();
+                sleep(Duration::milliseconds(200));
                 Thread::yield_now();
             }
         }

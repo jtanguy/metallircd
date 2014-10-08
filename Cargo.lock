@@ -3,6 +3,7 @@ name = "metallircd"
 version = "0.0.1"
 dependencies = [
  "irccp 0.0.1 (git+https://github.com/metallirc/irccp-rs.git#2609d6539787e7e363854aaba992e98093f17c12)",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#05c1eb420f54569336b8481c28a46b5a7c51ec99)",
  "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git#c6159089a491ff4398c6d423263a085c95092a04)",
 ]
 
@@ -10,6 +11,11 @@ dependencies = [
 name = "irccp"
 version = "0.0.1"
 source = "git+https://github.com/metallirc/irccp-rs.git#2609d6539787e7e363854aaba992e98093f17c12"
+
+[[package]]
+name = "toml"
+version = "0.1.0"
+source = "git+https://github.com/alexcrichton/toml-rs#05c1eb420f54569336b8481c28a46b5a7c51ec99"
 
 [[package]]
 name = "uuid"

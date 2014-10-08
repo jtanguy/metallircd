@@ -2,8 +2,13 @@
 
 #![experimental]
 
-use logging::LogLevel;
+use logging::{LogLevel, Warning};
 
+pub use self::cfgfile::load_config;
+
+mod cfgfile;
+
+#[experimental]
 pub struct ServerConf {
     // generic
     pub name: String,
@@ -14,9 +19,27 @@ pub struct ServerConf {
     pub loglevel: LogLevel,
     pub logfile: Path,
 
-    // sleep times:
-    pub tcp_timout: u64,
-    pub thread_handler_count: uint,
-    pub thread_sleep_time: i64,
-    pub thread_new_users_cnx_timeout: u64,
+    // threads
+    pub thread_handler_count: uint
+}
+
+#[experimental]
+impl ServerConf {
+
+    #[experimental]
+    pub fn default_conf() -> ServerConf {
+        ServerConf {
+            name: String::new(), // no default
+            address: String::new(), // no default
+            port: 0u16, // no default
+
+            // logs
+            loglevel: Warning,
+            logfile: from_str("./metallirc.log").unwrap(),
+
+            // threads
+            thread_handler_count: 2u
+        }
+    }
+
 }

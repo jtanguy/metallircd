@@ -1,0 +1,7 @@
+[ircd]
+server_name = "irc.example.com"
+address = "127.0.0.1"
+port = 6667
+
+[logging]
+level = "Info"
