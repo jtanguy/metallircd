@@ -11,7 +11,7 @@ use irccp::IRCMessage;
 use uuid::Uuid;
 
 use super::chan::Channel;
-use super::modes::MembershipMode;
+use modes::MembershipMode;
 use util;
 use users::UserManager;
 

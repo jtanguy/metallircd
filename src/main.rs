@@ -1,5 +1,7 @@
 //! metallircd
 
+#![feature(macro_rules)]
+
 extern crate irccp;
 extern crate time;
 extern crate toml;
@@ -11,6 +13,7 @@ use std::io::net::tcp::TcpListener;
 pub mod channels;
 pub mod conf;
 pub mod logging;
+pub mod modes;
 pub mod scheduling;
 pub mod users;
 pub mod util;

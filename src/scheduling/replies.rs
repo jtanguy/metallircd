@@ -3,7 +3,6 @@
 #![experimental]
 
 use super::ServerData;
-use channels::modes;
 use users::UserData;
 
 use irccp::{numericreply, ToIRCMessage};
@@ -20,12 +19,9 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
     let mut buffer = String::new();
     for &(id, mode) in names.iter() {
         let mut nextnick = String::new();
-        match mode {
-            modes::mm_founder => nextnick.push('~'),
-            modes::mm_op => nextnick.push('@'),
-            modes::mm_halfop => nextnick.push('%'),
-            modes::mm_voice => nextnick.push('+'),
-            _ => {}
+        match mode.prefix() {
+            Some(c) => nextnick.push(c),
+            None => {}
         }
         nextnick.push_str(srv.users.read().get_user_by_uuid(&id).unwrap().nickname.as_slice());
         if buffer.len() + nextnick.len() + 1 > msg.max_suffix_len() {

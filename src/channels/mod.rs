@@ -7,4 +7,3 @@ pub use self::manager::ChannelManager;
 
 mod chan;
 mod manager;
-pub mod modes;

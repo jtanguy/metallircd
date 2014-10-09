@@ -7,8 +7,7 @@ use std::collections::hashmap::Keys;
 
 use uuid::Uuid;
 
-use super::modes;
-use super::modes::MembershipMode;
+use modes::MembershipMode;
 
 /// A channel.
 #[experimental]
@@ -46,7 +45,7 @@ impl Channel {
     #[experimental]
     pub fn join(&mut self, user: Uuid) {
         if !self.members.contains_key(&user) {
-            self.members.insert(user, modes::mm_none);
+            self.members.insert(user, MembershipMode::empty());
         }
     }
 
