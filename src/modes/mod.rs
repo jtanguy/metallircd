@@ -1,3 +1,5 @@
+#![allow(non_uppercase_statics)]
+
 ///! The modes system.
 
 macro_rules! def_modes(
@@ -5,7 +7,7 @@ macro_rules! def_modes(
 
 bitflags!{
     flags $enum_name: u64 {
-        $(static $name = $bitval),*
+        $(const $name = $bitval),*
     }
 }
 
