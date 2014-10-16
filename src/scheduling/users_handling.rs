@@ -5,7 +5,7 @@ use logging::Info;
 
 use std::io;
 
-use irccp::{command, numericreply, ToIRCMessage};
+use messages::{IRCMessage, numericreply};
 
 use uuid::Uuid;
 
@@ -67,8 +67,12 @@ pub fn disconnect_user(id: &Uuid, srv: &ServerData, reason: &str) {
     let mut pu = future_zombie.private_handler();
     // we don't care about the result, it will be disconnected anyway.
     let _ = pu.socket_write_message(
-        command::NOTICE(zombie_nickname, format!("You will be disconnected for the reason: {}", reason))
-            .to_ircmessage().with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
+        IRCMessage {
+            prefix: Some(srv.settings.read().name.clone()),
+            command: "NOTICE".to_string(),
+            args: vec!(zombie_nickname),
+            suffix: Some(format!("You will be disconnected for the reason: {}", reason))
+        }
     );
     pu.zombify();
 }
@@ -78,18 +82,25 @@ pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
         ChangeNick(new_nick) => {
             let mut manager = srv.users.write();
             let old_name = manager.get_user_by_uuid(id).unwrap().get_fullname();
+            let old_nick = manager.get_user_by_uuid(id).unwrap().nickname.clone();
             let success = manager.change_nick(id, &new_nick);
             if success {
                 manager.get_user_by_uuid(id).unwrap().push_message(
-                    command::NICK(new_nick).to_ircmessage()
-                        .with_prefix(old_name.as_slice()).ok().unwrap()
+                    IRCMessage {
+                        prefix: Some(old_name),
+                        command: "NICK".to_string(),
+                        args: vec!(new_nick),
+                        suffix: None,
+                    }
                 );
             } else {
                 manager.get_user_by_uuid(id).unwrap().push_message(
-                    numericreply::ERR_NICKNAMEINUSE.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .add_arg(new_nick.as_slice()).ok().unwrap()
-                        .with_suffix("Nickname is already in use.").ok().unwrap()
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_NICKNAMEINUSE.to_text(),
+                        args: vec!(old_nick, new_nick),
+                        suffix: Some("Nickname is already in use.".to_string())
+                    }
                 );
             }
         },

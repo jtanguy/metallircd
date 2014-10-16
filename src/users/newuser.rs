@@ -4,9 +4,7 @@ use std::io;
 use std::io::BufferedStream;
 use std::io::net::tcp::TcpStream;
 
-use irccp;
-use irccp::{IRCMessage, command, numericreply, ToIRCMessage};
-use irccp::from_ircmessage;
+use messages::{IRCMessage, numericreply};
 
 use conf::ServerConf;
 use util;
@@ -39,13 +37,16 @@ impl NewUser {
 
     #[experimental]
     fn err_reply(&mut self, server: &ServerConf, code: numericreply::NumericReply, arg: &str, suffix: &str) {
-        match util::write_message(&mut self.socket,
-                code.to_ircmessage()
-                    .with_prefix(server.name.as_slice()).ok().unwrap()
-                    .add_arg(arg).ok().unwrap()
-                    .with_suffix(suffix).ok().unwrap()) {
-            Err(_) => { self.zombie = true; },
-            _ => {}
+        if util::write_message(&mut self.socket,
+                IRCMessage {
+                    prefix: Some(server.name.clone()),
+                    command: code.to_text(),
+                    args: vec!(arg.to_string()),
+                    suffix: Some(suffix.to_string())
+                }
+            ).is_err()
+        {
+            self.zombie = true;
         }
     }
 
@@ -56,26 +57,29 @@ impl NewUser {
         match self.socket.read_line() {
             // got a line
             Ok(txt) => match from_str::<IRCMessage>(txt.as_slice().lines_any().next().unwrap()) {
-                Some(msg) => match from_ircmessage::<command::Command>(&msg) {
-                    Ok(command::USER(username, _, realname)) => {
+                Some(msg) => match msg.command.as_slice() {
+                    "USER" => if msg.args.len() >= 4 {
                         // TODO : check validity
                         // TODO : allow only once
-                        self.username = Some(username);
-                        self.realname = Some(realname);
+                        self.username = Some(msg.args[0].clone());
+                        self.realname = Some(msg.args[3].clone());
+                    } else {
+                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
+                                        "USER",
+                                        "Not enough parameters.")
                     },
-                    Ok(command::NICK(nick)) => {
-                        if util::check_label(nick.as_slice()) {
-                            self.nickname = Some(nick);
+                    "NICK" => if msg.args.len() >= 1 {
+                        if util::check_label(msg.args[0].as_slice()) {
+                            self.nickname = Some(msg.args[0].clone());
                         } else {
                             self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME, "",
-                               format!("{} : Erroneous nickname.", nick).as_slice());
+                               format!("{} : Erroneous nickname.", msg.args[0]).as_slice());
                         }
+                    }else {
+                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
+                                        "NICK",
+                                        "Not enough parameters.")
                     },
-                    Err(irccp::TooFewParameters) => self.err_reply(server,
-                                                                   numericreply::ERR_NEEDMOREPARAMS,
-                                                                   msg.command.as_slice(),
-                                                                   "Not enough parameters."),
-                    // at this stage, ignore everithing else
                     _ => {}
                 },
                 None => {}

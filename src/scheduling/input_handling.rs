@@ -7,19 +7,21 @@ use super::users_handling::{Zombify, ChangeNick, Nothing};
 use super::users_handling::RecyclingAction;
 use super::ServerData;
 
-use logging::Warning;
 use users::UserData;
 use util;
 
-use irccp;
-use irccp::{IRCMessage, from_ircmessage, command, numericreply, ToIRCMessage};
+use messages::{IRCMessage,numericreply};
 
 use uuid::Uuid;
 
 /// Dispatches the message, returns false if the target didn't exist.
 fn dispatch_msg(me: &UserData, my_id: &Uuid, to: String, msg: String, srv: &ServerData, notice: bool) -> bool {
-    let message = if notice { command::NOTICE(to.clone(), msg) } else { command::PRIVMSG(to.clone(), msg) }
-                    .to_ircmessage().with_prefix(me.get_fullname().as_slice()).ok().unwrap();
+    let message = IRCMessage {
+        prefix: Some(me.get_fullname()),
+        command: if notice { "NOTICE" } else { "PRIVMSG" }.to_string(),
+        args: vec!(),
+        suffix: Some(msg)
+    };
 
     if srv.channels.read().has_chan(&to) {
         srv.channels.read().send_to_chan(&*srv.users.read(), &to, message, Some(my_id.clone()));
@@ -35,16 +37,28 @@ fn dispatch_msg(me: &UserData, my_id: &Uuid, to: String, msg: String, srv: &Serv
     }
 }
 
+
+
 pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerData) -> RecyclingAction {
-    match from_ircmessage::<command::Command>(&msg) {
+    match msg.command.as_slice() {
         // == Commands ==
         // QUIT
-        Ok(command::QUIT(msg)) => {
+        "QUIT" => {
             let emptied = srv.channels.read().quit(
                 &*srv.users.read(),
                 &my_id,
-                command::QUIT(msg).to_ircmessage()
-                    .with_prefix(me.get_fullname().as_slice()).ok().unwrap()
+                IRCMessage {
+                    prefix: Some(me.get_fullname()),
+                    command: "QUIT".to_string(),
+                    args: vec!(),
+                    suffix: {
+                        let mut it = msg.args.iter();
+                        match it.next() {
+                            None => None,
+                            Some(txt) => Some(it.fold(txt.clone(), |f, n| f + " " + n.as_slice()))
+                        }
+                    }
+                },
             );
             if emptied.len() > 0 {
                 let mut handle = srv.channels.write();
@@ -55,57 +69,97 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
             Zombify
         },
         // NICK
-        Ok(command::NICK(nick)) => {
+        "NICK" => if msg.args.len() >= 1 {
+            let nick = msg.args[0].clone();
             if util::check_label(nick.as_slice()) {
                 if nick != me.nickname { ChangeNick(nick) } else { Nothing }
             } else {
                 me.push_message(
-                    numericreply::ERR_ERRONEUSNICKNAME.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .with_suffix(format!("{} : Erroneous nickname.", nick).as_slice()).ok().unwrap()
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_ERRONEUSNICKNAME.to_text(),
+                        args: vec!(me.nickname.clone(), nick),
+                        suffix: Some("Erroneous nickname.".to_string())
+                    }
                 );
                 Nothing
             }
+        } else {
+            me.push_message(
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NEEDMOREPARAMS.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("Not enough parameters.".to_string())
+                }
+            );
+            Nothing
         },
         // PING
-        Ok(command::PING(from, target)) => {
-            match target {
-                None => {
-                    // just bounce back the content to client
-                    me.push_message(command::PONG(from, None).to_ircmessage());
-                },
-                Some(to) => if to == srv.settings.read().name {
-                    me.push_message(command::PONG(to, Some(from)).to_ircmessage());
-                } else {
-                    // TODO handle ping forward to other servers
+        "PING" => if msg.args.len() >= 1 {
+            // TODO : more precise understanding of expected behavior !!
+            me.push_message(
+                IRCMessage {
+                    prefix: None,
+                    command: "PONG".to_string(),
+                    args: vec!(srv.settings.read().name.clone(), msg.args[0].clone()),
+                    suffix: None
                 }
-            }
+            );
+            Nothing
+        } else {
+            me.push_message(
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NEEDMOREPARAMS.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("Not enough parameters.".to_string())
+                }
+            );
             Nothing
         },
         // Messages
-        Ok(command::PRIVMSG(target, msg)) => {
-            if !dispatch_msg(me, &my_id, target.clone(), msg, srv, false) {
+        "PRIVMSG" | "NOTICE" => if msg.args.len() >= 2 {
+            if !dispatch_msg(me, &my_id, msg.args[1].clone(), {
+                // merge all remaining arguments as the message
+                let txt = msg.args[1].clone();
+                msg.args.iter().skip(2).fold(txt, |f, n| f + " " + n.as_slice())
+            }, srv, msg.command.as_slice() == "NOTICE") {
                 me.push_message(
-                    numericreply::ERR_NOSUCHNICK.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .with_suffix(format!("{} : No such nick/channel.", target).as_slice()).ok().unwrap()
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_NOSUCHNICK.to_text(),
+                        args: vec!(me.nickname.clone(), msg.args[0].clone()),
+                        suffix: Some("No such nick/channel.".to_string())
+                    }
                 );
             }
             Nothing
-        },
-        Ok(command::NOTICE(target, msg)) => {
-            if !dispatch_msg(me, &my_id, target.clone(), msg, srv, true) {
-                me.push_message(
-                    numericreply::ERR_NOSUCHNICK.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .with_suffix(format!("{} : No such nick/channel.", target).as_slice()).ok().unwrap()
-                );
-            }
+        } else if msg.args.len() >= 1 {
+            me.push_message(
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NORECIPIENT.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("No text to send.".to_string())
+                }
+            );
+            Nothing
+        } else {
+            me.push_message(
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NORECIPIENT.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some(format!("No recipient given ({}).", msg.command))
+                }
+            );
             Nothing
         },
         // Channel interaction
-        Ok(command::JOIN(chan, _)) => {
+        "JOIN" => if msg.args.len() >= 1 {
             // TODO handle chan with passwords
+            let chan = msg.args[0].clone();
             if util::check_channame(chan.as_slice()) {
                 let has_chan = srv.channels.read().has_chan(&chan);
                 if has_chan {
@@ -116,28 +170,56 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                 srv.channels.read().send_to_chan(
                     &*srv.users.read(),
                     &chan,
-                    command::JOIN(chan.clone(), None).to_ircmessage()
-                        .with_prefix(me.get_fullname().as_slice()).ok().unwrap(),
+                    IRCMessage {
+                        prefix: Some(me.get_fullname()),
+                        command: "JOIN".to_string(),
+                        args: vec!(msg.args[0].clone()),
+                        suffix: None
+                    },
                     None
                 );
                 send_names(me, &chan, srv);
             } else {
                 // invalid chan name
                 me.push_message(
-                    numericreply::ERR_BADCHANMASK.to_ircmessage()
-                        .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                        .add_arg(me.nickname.as_slice()).ok().unwrap()
-                        .with_suffix(format!("{} : Bad Channel name.", chan).as_slice()).ok().unwrap()
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_BADCHANMASK.to_text(),
+                        args: vec!(me.nickname.clone(), msg.args[0].clone()),
+                        suffix: Some("Bad Channel name.".to_string())
+                    }
                 );
             }
             Nothing
-        }
-        Ok(command::PART(chan, msg)) => {
+        } else {
+            me.push_message(
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NEEDMOREPARAMS.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("Not enough parameters.".to_string())
+                }
+            );
+            Nothing
+        },
+        //Ok(command::PART(chan, msg)) => {
+        "PART" => if msg.args.len() >= 1 {
+            let chan = msg.args[0].clone();
             srv.channels.read().send_to_chan(
                 &*srv.users.read(),
                 &chan,
-                command::PART(chan.clone(), msg).to_ircmessage()
-                    .with_prefix(me.get_fullname().as_slice()).ok().unwrap(),
+                IRCMessage {
+                    prefix: Some(me.get_fullname()),
+                    command: "PART".to_string(),
+                    args: vec!(msg.args[0].clone()),
+                    suffix: {
+                        let mut it = msg.args.iter().skip(1);
+                        match it.next() {
+                            None => None,
+                            Some(txt) => Some(it.fold(txt.clone(), |f, n| f + " " + n.as_slice()))
+                        }
+                    }
+                },
                 None
             );
             let becomes_empty = srv.channels.read().part(&my_id, &chan);
@@ -145,37 +227,27 @@ pub fn handle_command(me: &UserData, my_id: Uuid, msg: IRCMessage, srv: &ServerD
                 srv.channels.write().destroy_if_empty(&chan);
             }
             Nothing
-        }
-        // == Errors ==
-        Err(irccp::TooFewParameters) => {
+        } else {
             me.push_message(
-                numericreply::ERR_NEEDMOREPARAMS.to_ircmessage()
-                    .add_arg(me.nickname.as_slice()).ok().unwrap()
-                    .add_arg(msg.command.as_slice()).ok().unwrap()
-                    .with_suffix("Not enough parameters.").ok().unwrap()
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_NEEDMOREPARAMS.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("Not enough parameters.".to_string())
+                }
             );
             Nothing
         },
-        Err(irccp::UnknownCommand) => {
+        _ => {
             me.push_message(
-                numericreply::ERR_UNKNOWNCOMMAND.to_ircmessage()
-                    .add_arg(me.nickname.as_slice()).ok().unwrap()
-                    .add_arg(msg.command.as_slice()).ok().unwrap()
-                    .with_suffix("Unknown command.").ok().unwrap()
+                IRCMessage {
+                    prefix: Some(srv.settings.read().name.clone()),
+                    command: numericreply::ERR_UNKNOWNCOMMAND.to_text(),
+                    args: vec!(me.nickname.clone(), msg.command.clone()),
+                    suffix: Some("Unknown command.".to_string())
+                }
             );
             Nothing
-        }
-        Err(irccp::OtherError(_)) => { /* nothing for now */ Nothing },
-        // == TODO ==
-        Ok(_) => {
-            me.push_message(
-                numericreply::ERR_UNKNOWNCOMMAND.to_ircmessage()
-                    .add_arg(me.nickname.as_slice()).ok().unwrap()
-                    .add_arg(msg.command.as_slice()).ok().unwrap()
-                    .with_suffix("Not yet implemented.").ok().unwrap()
-            );
-            srv.logger.log(Warning, format!("stub called : {}", msg.command));
-            Nothing
-        }
+        },
     }
 }

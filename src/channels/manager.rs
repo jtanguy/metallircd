@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hashmap::{Occupied, Vacant};
 use std::sync::RWLock;
 
-use irccp::IRCMessage;
+use messages::IRCMessage;
 
 use uuid::Uuid;
 

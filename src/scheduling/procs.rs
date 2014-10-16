@@ -13,7 +13,7 @@ use std::sync::deque::{Stealer, Worker};
 use std::task::TaskBuilder;
 use std::time::duration::Duration;
 
-use irccp::{numericreply, ToIRCMessage};
+use messages::{numericreply, IRCMessage};
 
 use uuid::Uuid;
 
@@ -56,13 +56,13 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                 let my_user = manager_handle.get_user_by_uuid(&id).unwrap();
                                 // welcome the new user
                                 my_user.push_message(
-                                    numericreply::RPL_WELCOME.to_ircmessage()
-                                        .with_prefix(srv.settings.read().name.as_slice()).unwrap()
-                                        .add_arg(my_user.nickname.as_slice()).ok().unwrap()
-                                        .with_suffix(
-                                            format!("Welcome to metallirc IRC Network {}",
-                                                    my_user.get_fullname().as_slice()).as_slice()
-                                        ).ok().unwrap()
+                                    IRCMessage {
+                                        prefix: Some(srv.settings.read().name.clone()),
+                                        command: numericreply::RPL_WELCOME.to_text(),
+                                        args: vec!(my_user.nickname.clone()),
+                                        suffix: Some(format!("Welcome to metallirc IRC Network {}",
+                                                    my_user.get_fullname().as_slice()))
+                                    }
                                 );
                                 srv.logger.log(Info,
                                     format!("New user {} with UUID {}.", my_user.get_fullname(), id));

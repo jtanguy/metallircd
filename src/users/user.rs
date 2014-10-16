@@ -7,7 +7,7 @@ use std::io::net::tcp::TcpStream;
 use std::sync::{Mutex, MutexGuard, RWLock};
 use std::sync::mpsc_queue::Queue as MPSCQueue;
 
-use irccp::IRCMessage;
+use messages::IRCMessage;
 
 use util;
 

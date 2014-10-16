@@ -5,17 +5,18 @@
 use super::ServerData;
 use users::UserData;
 
-use irccp::{numericreply, ToIRCMessage};
+use messages::{IRCMessage, numericreply};
 
 /// Sends a RPL_NAMREPLY with the users of the given chan to me
 #[experimental]
 pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
     let names = srv.channels.read().member_list(chan);
-    let msg = numericreply::RPL_NAMEREPLY.to_ircmessage()
-                    .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-                    .add_arg(me.nickname.as_slice()).ok().unwrap()
-                    .add_arg("=").ok().unwrap()
-                    .add_arg(chan.as_slice()).ok().unwrap();
+    let msg = IRCMessage {
+        prefix: Some(srv.settings.read().name.clone()),
+        command: numericreply::RPL_NAMEREPLY.to_text(),
+        args: vec!(me.nickname.clone(), "=".to_string(), chan.clone()),
+        suffix: None
+    };
     let mut buffer = String::new();
     for &(id, mode) in names.iter() {
         let mut nextnick = String::new();
@@ -24,9 +25,13 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
             None => {}
         }
         nextnick.push_str(srv.users.read().get_user_by_uuid(&id).unwrap().nickname.as_slice());
-        if buffer.len() + nextnick.len() + 1 > msg.max_suffix_len() {
+        if buffer.len() + nextnick.len() + 1 > 510 - msg.protocol_len() {
             me.push_message(
-                msg.clone().with_suffix(buffer.as_slice()).ok().unwrap()
+                {
+                    let mut m = msg.clone();
+                    m.suffix = Some(buffer);
+                    m
+                }
             );
             buffer = nextnick;
         } else {
@@ -40,14 +45,19 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
     }
     if buffer.len() > 0 {
         me.push_message(
-                msg.with_suffix(buffer.as_slice()).ok().unwrap()
+            {
+                let mut m = msg.clone();
+                m.suffix = Some(buffer);
+                m
+            }
         );
     }
     me.push_message(
-        numericreply::RPL_ENDOFNAMES.to_ircmessage()
-            .with_prefix(srv.settings.read().name.as_slice()).ok().unwrap()
-            .add_arg(me.nickname.as_slice()).ok().unwrap()
-            .add_arg(chan.as_slice()).ok().unwrap()
-            .with_suffix("End of NAMES list.").ok().unwrap()
+        IRCMessage {
+            prefix: Some(srv.settings.read().name.clone()),
+            command: numericreply::RPL_ENDOFNAMES.to_text(),
+            args: vec!(me.nickname.clone(), chan.clone()),
+            suffix: Some("End of NAMES list.".to_string())
+        }
     );
 }
