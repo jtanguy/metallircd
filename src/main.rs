@@ -14,6 +14,7 @@ pub mod conf;
 pub mod logging;
 pub mod messages;
 pub mod modes;
+pub mod modules;
 pub mod scheduling;
 pub mod users;
 pub mod util;

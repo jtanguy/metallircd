@@ -1,5 +1,6 @@
-use super::input_handling;
 use super::ServerData;
+
+use modules::{RecyclingAction, Nothing, Zombify, ChangeNick};
 
 use logging::Info;
 
@@ -8,18 +9,6 @@ use std::io;
 use messages::{IRCMessage, numericreply};
 
 use uuid::Uuid;
-
-/// Special actions to be performed by the recycler thread
-#[experimental]
-#[deriving(PartialEq)]
-pub enum RecyclingAction {
-    /// Nothing to do
-    Nothing,
-    /// a nick change is requested
-    ChangeNick(String),
-    /// the user should be zombified
-    Zombify
-}
 
 /// Handles a user, sending and receiving awaiting messages
 #[experimental]
@@ -37,7 +26,7 @@ pub fn handle_user(id: &Uuid, srv: &ServerData) -> RecyclingAction {
     } {}
 
     while match pu.socket_read_message() {
-        Ok(msg) => match input_handling::handle_command(u, id.clone(), msg, srv) {
+        Ok(msg) => match srv.modules_handler.read().handle_command(u, id, msg, srv) {
             Zombify => { pu.zombify(); return Nothing; },
             Nothing => true,
             act => { return act; }

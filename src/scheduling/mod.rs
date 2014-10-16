@@ -6,6 +6,7 @@ use channels::ChannelManager;
 use logging::Logger;
 use conf::ServerConf;
 use users::UserManager;
+use modules::{ModulesHandler, RecyclingAction};
 
 use std::io::net::tcp::TcpAcceptor;
 use std::sync::mpsc_queue::Queue as MPSCQueue;
@@ -13,10 +14,8 @@ use std::sync::{Arc, deque, RWLock};
 
 use uuid::Uuid;
 
-mod input_handling;
 mod users_handling;
 mod procs;
-mod replies;
 
 #[experimental]
 pub struct ServerData {
@@ -25,8 +24,10 @@ pub struct ServerData {
     pub channels: RWLock<ChannelManager>,
 
     pub logger: Logger,
-    pub queue_users_torecycle: MPSCQueue<(Uuid, users_handling::RecyclingAction)>,
-    pub signal_shutdown: RWLock<bool>
+    pub queue_users_torecycle: MPSCQueue<(Uuid, RecyclingAction)>,
+    pub signal_shutdown: RWLock<bool>,
+
+    pub modules_handler: RWLock<ModulesHandler>
 }
 
 #[experimental]
@@ -34,13 +35,15 @@ impl ServerData {
 
     pub fn new(settings: ServerConf)-> ServerData {
         let loglevel = settings.loglevel;
+        let modules_hdlr = ModulesHandler::init(&settings);
         ServerData {
             settings: RWLock::new(settings),
             users: RWLock::new(UserManager::new()),
             channels: RWLock::new(ChannelManager::new()),
             logger: Logger::new(loglevel),
             queue_users_torecycle: MPSCQueue::new(),
-            signal_shutdown: RWLock::new(false)
+            signal_shutdown: RWLock::new(false),
+            modules_handler: RWLock::new(modules_hdlr)
         }
     }
 }

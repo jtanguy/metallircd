@@ -6,11 +6,13 @@ use uuid::Uuid;
 
 use super::IRCMessage;
 
+#[deriving(Clone)]
 #[experimental]
 pub enum Actor {
     Channel(String),
     Server(String),
-    User(Uuid, String)
+    User(Uuid, String),
+    Everybody
 }
 
 impl Actor {
@@ -18,7 +20,8 @@ impl Actor {
         match self {
             Channel(s) => s,
             Server(s) => s,
-            User(_, s) => s
+            User(_, s) => s,
+            Everybody => "*".to_string()
         }
     }
 }

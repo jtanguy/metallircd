@@ -14,6 +14,7 @@ use std::task::TaskBuilder;
 use std::time::duration::Duration;
 
 use messages::{numericreply, IRCMessage};
+use modules;
 
 use uuid::Uuid;
 
@@ -21,7 +22,6 @@ use logging::Info;
 use users;
 
 use super::ServerData;
-use super::users_handling;
 use super::users_handling::{handle_user, destroy_user, recycle_user, disconnect_user};
 
 pub fn spawn_newclients_handler(srv: Arc<ServerData>,
@@ -66,7 +66,7 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                 );
                                 srv.logger.log(Info,
                                     format!("New user {} with UUID {}.", my_user.get_fullname(), id));
-                                srv.queue_users_torecycle.push((id, users_handling::Nothing));
+                                srv.queue_users_torecycle.push((id, modules::Nothing));
                             },
                             Err(mut nu) => {
                                 // nick was already in use !
@@ -94,7 +94,7 @@ pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stea
                     deque::Data(id) => {
                         let action = if *srv.signal_shutdown.read() {
                             disconnect_user(&id, &*srv, "Server shutdown.");
-                            users_handling::Nothing
+                            modules::Nothing
                         } else {
                             handle_user(&id, &*srv)
                         };
@@ -132,7 +132,7 @@ pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Work
                             let is_zombie = srv.users.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie());
                             if is_zombie {
                                 destroy_user(&id, &*srv);
-                            } else if action == users_handling::Nothing {
+                            } else if action == modules::Nothing {
                                 recycled_worker.push(id);
                             } else {
                                 recycle_user(&id, action, &*srv);

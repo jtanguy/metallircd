@@ -104,4 +104,11 @@ impl UserManager {
         }
     }
 
+    #[experimental]
+    pub fn iterate_map(&self, func: |u: &UserData|) {
+        for u in self.users.values() {
+            func(u);
+        }
+    }
+
 }
