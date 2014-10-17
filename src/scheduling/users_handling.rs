@@ -69,21 +69,24 @@ pub fn disconnect_user(id: &Uuid, srv: &ServerData, reason: &str) {
 pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
     match action {
         ChangeNick(new_nick) => {
-            let mut manager = srv.users.write();
-            let old_name = manager.get_user_by_uuid(id).unwrap().get_fullname();
-            let old_nick = manager.get_user_by_uuid(id).unwrap().nickname.clone();
-            let success = manager.change_nick(id, &new_nick);
+            let (success, old_name, old_nick) = {
+                let mut manager = srv.users.write();
+                let old_name = manager.get_user_by_uuid(id).unwrap().get_fullname();
+                let old_nick = manager.get_user_by_uuid(id).unwrap().nickname.clone();
+                (manager.change_nick(id, &new_nick), old_name, old_nick)
+            };
             if success {
-                manager.get_user_by_uuid(id).unwrap().push_message(
-                    IRCMessage {
-                        prefix: Some(old_name),
-                        command: "NICK".to_string(),
-                        args: vec!(new_nick),
-                        suffix: None,
-                    }
-                );
+                let message = IRCMessage {
+                    prefix: Some(old_name),
+                    command: "NICK".to_string(),
+                    args: vec!(new_nick),
+                    suffix: None,
+                };
+                for u in srv.channels.read().known_by_uuid(id).iter() {
+                    srv.users.read().get_user_by_uuid(u).unwrap().push_message(message.clone());
+                }
             } else {
-                manager.get_user_by_uuid(id).unwrap().push_message(
+                srv.users.read().get_user_by_uuid(id).unwrap().push_message(
                     IRCMessage {
                         prefix: Some(srv.settings.read().name.clone()),
                         command: numericreply::ERR_NICKNAMEINUSE.to_text(),
