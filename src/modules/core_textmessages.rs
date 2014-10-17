@@ -29,7 +29,7 @@ impl CommandHandler for CmdPrivmsgOrNotice {
                 txt = cmd.args.iter().skip(2).fold(cmd.args[1].clone(), |f, n| f + " " + n.as_slice());
             }
             if let Some(ref suff) = cmd.suffix {
-                txt = txt + " " + suff.as_slice();
+                txt = if txt.len() > 0 { txt + " " } else { txt } + suff.as_slice();
             }
 
             if let Some(id) = srv.users.read().get_uuid_of_nickname(&cmd.args[0]) {
