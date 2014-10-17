@@ -58,22 +58,31 @@ impl NewUser {
             // got a line
             Ok(txt) => match from_str::<IRCMessage>(txt.as_slice().lines_any().next().unwrap()) {
                 Some(msg) => match msg.command.as_slice() {
-                    "USER" => if msg.args.len() >= 4 {
+                    "USER" => if msg.args.len() + msg.suffix.is_some() as uint >= 4 {
                         // TODO : check validity
                         // TODO : allow only once
                         self.username = Some(msg.args[0].clone());
-                        self.realname = Some(msg.args[3].clone());
+                        self.realname = if msg.args.len() >= 4 {
+                            Some(msg.args[3].clone())
+                        } else {
+                            msg.suffix.clone()
+                        };
                     } else {
                         self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
                                         "USER",
                                         "Not enough parameters.")
                     },
-                    "NICK" => if msg.args.len() >= 1 {
-                        if util::check_label(msg.args[0].as_slice()) {
-                            self.nickname = Some(msg.args[0].clone());
+                    "NICK" => if msg.args.len() + msg.suffix.is_some() as uint >= 1 {
+                        let nick = if msg.args.len() >= 1 {
+                            msg.args[0].clone()
+                        } else {
+                            msg.suffix.clone().unwrap()
+                        };
+                        if util::check_label(nick.as_slice()) {
+                            self.nickname = Some(nick);
                         } else {
                             self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME, "",
-                               format!("{} : Erroneous nickname.", msg.args[0]).as_slice());
+                               format!("{} : Erroneous nickname.", nick).as_slice());
                         }
                     }else {
                         self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
