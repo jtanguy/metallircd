@@ -27,7 +27,7 @@ impl ModAway {
 module!(ModAway is CommandHandler, MessageSendingHandler)
 
 impl CommandHandler for ModAway {
-        fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+    fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "AWAY" { return (false, Nothing); }
 
