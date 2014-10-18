@@ -13,6 +13,8 @@ use super::{MessageSendingHandler, CommandHandler};
 
 pub struct CmdPrivmsgOrNotice;
 
+module!(CmdPrivmsgOrNotice is CommandHandler)
+
 impl CommandHandler for CmdPrivmsgOrNotice {
     fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
@@ -75,6 +77,8 @@ impl CommandHandler for CmdPrivmsgOrNotice {
 
 pub struct QueryDispatcher;
 
+module!(QueryDispatcher is MessageSendingHandler)
+
 impl MessageSendingHandler for QueryDispatcher {
     fn handle_message_sending(&self, cmd: TextMessage, srv: &ServerData) -> Option<TextMessage> {
         match cmd.target {
@@ -108,6 +112,8 @@ impl MessageSendingHandler for QueryDispatcher {
 }
 
 pub struct ChannelDispatcher;
+
+module!(ChannelDispatcher is MessageSendingHandler)
 
 impl MessageSendingHandler for ChannelDispatcher {
     fn handle_message_sending(&self, cmd: TextMessage, srv: &ServerData) -> Option<TextMessage> {

@@ -10,6 +10,75 @@ use users::UserData;
 
 use uuid::Uuid;
 
+//
+//
+// Dangerous Zone
+//
+// Here lies some pretty nasty magic needed for downcasting into their traits.
+// This should probably not change util DST a completely finished in Rust language.
+//
+
+use std::intrinsics::TypeId;
+use std::mem::{size_of, transmute};
+use std::raw::TraitObject;
+
+trait Module: 'static {
+    // HACK(eddyb) Missing upcast to Any to make this clean.
+    fn get_type_id(&self) -> TypeId { TypeId::of::<&'static Self>() }
+    fn get_vtable_for_trait(&self, _trait_id: TypeId) -> Option<&'static ()> { None }
+}
+
+macro_rules! module {
+    ($ty:ty is $($Trait:ty),+) => (
+        impl super::Module for $ty {
+            fn get_vtable_for_trait(&self, trait_id: ::std::intrinsics::TypeId) -> Option<&'static ()> {
+                $(if trait_id == ::std::intrinsics::TypeId::of::<&'static $Trait>() {
+                    Some(unsafe {&*::std::mem::transmute::<&$Trait, ::std::raw::TraitObject>(self).vtable})
+                })else+ else {
+                    None
+                }
+            }
+        }
+    )
+}
+
+trait ModuleRef<'a> {
+    fn as_ref<Sized? T>(self) -> Option<&'a T>;
+}
+
+impl<'a> ModuleRef<'a> for &'a Module+'static {
+    fn as_ref<Sized? T:'static>(self) -> Option<&'a T> {
+        let type_id = TypeId::of::<&'static T>();
+        unsafe {
+            let obj = transmute::<_, TraitObject>(self);
+            if size_of::<*const T>() == size_of::<uint>() {
+                if self.get_type_id() == type_id {
+                    Some(*transmute::<_, &&T>(&obj.data))
+                } else {
+                    None
+                }
+            } else {
+                self.get_vtable_for_trait(type_id).map(|vtable| {
+                    *transmute::<_, &&T>(&TraitObject {
+                        data: obj.data,
+                        vtable: vtable as *const _ as *mut _
+                    })
+                })
+            }
+        }
+    }
+}
+
+macro_rules! init_modules {
+    ($($m:expr),+) => {
+        vec!($(box $m as Box<Module + Send + Sync>),+)
+    }
+}
+//
+// End of Dangerous Zone
+//
+
+// declare your submodules here
 mod core_textmessages;
 mod core_commands;
 mod core_channels;
@@ -46,8 +115,7 @@ pub trait MessageSendingHandler : Send + Sync {
 }
 
 pub struct ModulesHandler {
-    command_handlers: Vec<Box<CommandHandler + 'static + Send + Sync>>,
-    message_sending_handlers: Vec<Box<MessageSendingHandler + 'static + Send + Sync>>
+    modules: Vec<Box<Module + 'static + Send + Sync>>,
 }
 
 impl ModulesHandler {
@@ -56,18 +124,16 @@ impl ModulesHandler {
     pub fn init(conf: &ServerConf) -> ModulesHandler {
         // Put the modules here for them to be loaded
         ModulesHandler {
-            command_handlers: vec!(
-                box core_commands::CmdPing as Box<CommandHandler + Send + Sync>,
-                box core_textmessages::CmdPrivmsgOrNotice as Box<CommandHandler + Send + Sync>,
-                box core_channels::CmdJoin as Box<CommandHandler + Send + Sync>,
-                box core_channels::CmdPart as Box<CommandHandler + Send + Sync>,
-                box core_channels::CmdNames as Box<CommandHandler + Send + Sync>,
-                box core_commands::CmdNick as Box<CommandHandler + Send + Sync>,
-                box core_commands::CmdQuit as Box<CommandHandler + Send + Sync>
-            ),
-            message_sending_handlers: vec!(
-                box core_textmessages::QueryDispatcher as Box<MessageSendingHandler + Send + Sync>,
-                box core_textmessages::ChannelDispatcher as Box<MessageSendingHandler + Send + Sync>
+            modules: init_modules!(
+                core_commands::CmdPing,
+                core_textmessages::CmdPrivmsgOrNotice,
+                core_channels::CmdJoin,
+                core_channels::CmdPart,
+                core_channels::CmdNames,
+                core_commands::CmdNick,
+                core_commands::CmdQuit,
+                core_textmessages::QueryDispatcher,
+                core_textmessages::ChannelDispatcher
             )
         }
     }
@@ -77,10 +143,12 @@ impl ModulesHandler {
     #[experimental]
     pub fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: IRCMessage, srv: &ServerData)
         -> RecyclingAction {
-        for handler in self.command_handlers.iter() {
-            let (done, action) = handler.handle_command(user, user_uuid, &cmd, srv);
-            if done {
-                return action;
+        for m in self.modules.iter() {
+            if let Some(handler) = m.as_ref::<CommandHandler>() {
+                let (done, action) = handler.handle_command(user, user_uuid, &cmd, srv);
+                if done {
+                    return action;
+                }
             }
         }
         srv.logger.log(Debug, format!("Unknown command call {} by {}.", cmd.command, user.nickname));
@@ -98,11 +166,13 @@ impl ModulesHandler {
     /// Sends a message by processing it through all the handlers in order until onrof them consumes it.
     #[experimental]
     pub fn send_message(&self, mut msg: TextMessage, srv: &ServerData) {
-        for handler in self.message_sending_handlers.iter() {
-            if let Some(m) = handler.handle_message_sending(msg, srv) {
-                msg = m;
-            } else {
-                return;
+        for m in self.modules.iter() {
+            if let Some(handler) = m.as_ref::<MessageSendingHandler>() {
+                if let Some(m) = handler.handle_message_sending(msg, srv) {
+                    msg = m;
+                } else {
+                    return;
+                }
             }
         }
         // if we reach this point, no handler consumed the message, we drop it.

@@ -14,6 +14,8 @@ use super::{CommandHandler, send_needmoreparams};
 
 pub struct CmdNick;
 
+module!(CmdNick is CommandHandler)
+
 impl CommandHandler for CmdNick {
     fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
@@ -42,6 +44,8 @@ impl CommandHandler for CmdNick {
 
 pub struct CmdQuit;
 
+module!(CmdQuit is CommandHandler)
+
 impl CommandHandler for CmdQuit {
     fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
@@ -68,6 +72,8 @@ impl CommandHandler for CmdQuit {
 }
 
 pub struct CmdPing;
+
+module!(CmdPing is CommandHandler)
 
 impl CommandHandler for CmdPing {
     fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
