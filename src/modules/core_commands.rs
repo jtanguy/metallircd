@@ -19,8 +19,8 @@ impl CommandHandler for CmdNick {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "NICK" { return (false, Nothing); }
 
-        if cmd.args.len() >= 1 {
-            let nick = cmd.args[0].clone();
+        if let Some(mut args) = cmd.as_nparams(1,0) {
+            let nick = args.pop().unwrap();
             if util::check_label(nick.as_slice()) {
                 if nick != user.nickname { return (true, ChangeNick(nick)) }
             } else {
@@ -74,13 +74,13 @@ impl CommandHandler for CmdPing {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "PING" { return (false, Nothing); }
 
-        if cmd.args.len() >= 1 {
+        if let Some(args) = cmd.as_nparams(1,1) {
             // TODO : more precise understanding of expected behavior !!
             user.push_message(
                 IRCMessage {
                     prefix: None,
                     command: "PONG".to_string(),
-                    args: vec!(srv.settings.read().name.clone(), cmd.args[0].clone()),
+                    args: vec!(srv.settings.read().name.clone(), args[0].clone()),
                     suffix: None
                 }
             );

@@ -22,38 +22,30 @@ impl CommandHandler for CmdPrivmsgOrNotice {
             _ => return (false, Nothing)
         };
 
-        if cmd.args.len() + cmd.suffix.is_some() as uint >= 2 {
-            // merge all remaining arguments as the message
-            let mut txt = String::new();
-            if cmd.args.len() > 1 {
-                txt = cmd.args.iter().skip(2).fold(cmd.args[1].clone(), |f, n| f + " " + n.as_slice());
-            }
-            if let Some(ref suff) = cmd.suffix {
-                txt = if txt.len() > 0 { txt + " " } else { txt } + suff.as_slice();
-            }
+        if let Some(args) = cmd.as_nparams(2, 0) {
 
-            if let Some(id) = srv.users.read().get_uuid_of_nickname(&cmd.args[0]) {
+            if let Some(id) = srv.users.read().get_uuid_of_nickname(&args[0]) {
                 srv.modules_handler.read().send_message(
                     TextMessage {
                         notice: notice,
                         source: User(user_uuid.clone(), user.nickname.clone()),
-                        target: User(id, cmd.args[0].clone()),
-                        text: txt
+                        target: User(id, args[0].clone()),
+                        text: args[1].clone()
                     }, srv);
-            } else if srv.channels.read().has_chan(cmd.args[0].as_slice()) {
+            } else if srv.channels.read().has_chan(args[0].as_slice()) {
                 srv.modules_handler.read().send_message(
                     TextMessage {
                         notice: notice,
                         source: User(user_uuid.clone(), user.nickname.clone()),
-                        target: Channel(cmd.args[0].clone()),
-                        text: txt
+                        target: Channel(args[0].clone()),
+                        text: args[1].clone()
                     }, srv);
             } else {
                 user.push_message(
                     IRCMessage {
                         prefix: Some(srv.settings.read().name.clone()),
                         command: numericreply::ERR_NOSUCHNICK.to_text(),
-                        args: vec!(user.nickname.clone(), cmd.args[0].clone()),
+                        args: vec!(user.nickname.clone(), args[0].clone()),
                         suffix: Some("No such nick/channel.".to_string())
                     }
                 );
@@ -62,7 +54,7 @@ impl CommandHandler for CmdPrivmsgOrNotice {
             user.push_message(
                 IRCMessage {
                     prefix: Some(srv.settings.read().name.clone()),
-                    command: numericreply::ERR_NORECIPIENT.to_text(),
+                    command: numericreply::ERR_NOTEXTTOSEND.to_text(),
                     args: vec!(user.nickname.clone(), cmd.command.clone()),
                     suffix: Some("No text to send.".to_string())
                 }
