@@ -39,7 +39,7 @@ impl Logger {
     pub fn log(&self, level: LogLevel, text: String) {
         if level as u8 <= self.level as u8 {
             let t = now();
-            self.queue.push(format!("[{}] {}: {}", t.strftime("%d/%b/%Y:%H:%M:%S %z"), level, text));
+            self.queue.push(format!("[{}] {}: {}", t.strftime("%d/%b/%Y:%H:%M:%S %z").unwrap(), level, text));
         }
     }
 
