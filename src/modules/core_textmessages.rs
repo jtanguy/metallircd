@@ -40,7 +40,7 @@ impl CommandHandler for CmdPrivmsgOrNotice {
                         target: User(id, cmd.args[0].clone()),
                         text: txt
                     }, srv);
-            } else if srv.channels.read().has_chan(&cmd.args[0]) {
+            } else if srv.channels.read().has_chan(cmd.args[0].as_slice()) {
                 srv.modules_handler.read().send_message(
                     TextMessage {
                         notice: notice,
@@ -123,7 +123,7 @@ impl MessageSendingHandler for ChannelDispatcher {
             Channel(chan) => {
                 srv.channels.read().send_to_chan(
                     &*srv.users.read(),
-                    &chan,
+                    chan.as_slice(),
                     IRCMessage {
                         prefix: Some(cmd.source.clone().into_text()),
                         command: if cmd.notice { "NOTICE" } else { "PRIVMSG" }.to_string(),

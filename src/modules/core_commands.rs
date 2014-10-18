@@ -60,7 +60,7 @@ impl CommandHandler for CmdQuit {
         if emptied.len() > 0 {
             let mut handle = srv.channels.write();
             for chan in emptied.iter() {
-                handle.destroy_if_empty(chan);
+                handle.destroy_if_empty(chan.as_slice());
             }
         }
         (true, Zombify)

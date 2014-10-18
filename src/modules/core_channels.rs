@@ -19,38 +19,39 @@ impl CommandHandler for CmdJoin {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "JOIN" { return (false, Nothing); }
 
-        if cmd.args.len() >= 1 {
+        if let Some(args) = cmd.as_nparams(1,1) {
             // TODO handle chan with passwords
-            let chan = cmd.args[0].clone();
-            if util::check_channame(chan.as_slice()) {
-                let has_chan = srv.channels.read().has_chan(&chan);
-                if has_chan {
-                    srv.channels.read().join(user_uuid.clone(), &chan);
-                } else {
-                    srv.channels.write().join_create(user_uuid.clone(), chan.clone());
-                }
-                srv.channels.read().send_to_chan(
-                    &*srv.users.read(),
-                    &chan,
-                    IRCMessage {
-                        prefix: Some(user.get_fullname()),
-                        command: "JOIN".to_string(),
-                        args: vec!(cmd.args[0].clone()),
-                        suffix: None
-                    },
-                    None
-                );
-                send_names(user, &chan, srv);
-            } else {
-                // invalid chan name
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_BADCHANMASK.to_text(),
-                        args: vec!(user.nickname.clone(), cmd.args[0].clone()),
-                        suffix: Some("Bad Channel name.".to_string())
+            for chan in args[0].as_slice().split_terminator(',') {
+                if util::check_channame(chan) {
+                    let has_chan = srv.channels.read().has_chan(chan);
+                    if has_chan {
+                        srv.channels.read().join(user_uuid.clone(), chan);
+                    } else {
+                        srv.channels.write().join_create(user_uuid.clone(), chan);
                     }
-                );
+                    srv.channels.read().send_to_chan(
+                        &*srv.users.read(),
+                        chan,
+                        IRCMessage {
+                            prefix: Some(user.get_fullname()),
+                            command: "JOIN".to_string(),
+                            args: vec!(chan.to_string()),
+                            suffix: None
+                        },
+                        None
+                    );
+                    send_names(user, chan, srv);
+                } else {
+                    // invalid chan name
+                    user.push_message(
+                        IRCMessage {
+                            prefix: Some(srv.settings.read().name.clone()),
+                            command: numericreply::ERR_BADCHANMASK.to_text(),
+                            args: vec!(user.nickname.clone(), chan.to_string()),
+                            suffix: Some("Bad Channel name.".to_string())
+                        }
+                    );
+                }
             }
         } else {
             send_needmoreparams(user, "JOIN", srv);
@@ -67,22 +68,24 @@ impl CommandHandler for CmdPart {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "PART" { return (false, Nothing); }
 
-        if cmd.args.len() >= 1 {
-            let chan = cmd.args[0].clone();
-            srv.channels.read().send_to_chan(
-                &*srv.users.read(),
-                &chan,
-                IRCMessage {
-                    prefix: Some(user.get_fullname()),
-                    command: "PART".to_string(),
-                    args: cmd.args.clone(),
-                    suffix: cmd.suffix.clone()
-                },
-                None
-            );
-            let becomes_empty = srv.channels.read().part(user_uuid, &chan);
-            if becomes_empty {
-                srv.channels.write().destroy_if_empty(&chan);
+        if let Some(args) = cmd.as_nparams(1,1) {
+            let partmsg = if args.len() > 1 { args[1].as_slice() } else { "Leaving." };
+            for chan in args[0].as_slice().split_terminator(',') {
+                srv.channels.read().send_to_chan(
+                    &*srv.users.read(),
+                    chan,
+                    IRCMessage {
+                        prefix: Some(user.get_fullname()),
+                        command: "PART".to_string(),
+                        args: cmd.args.clone(),
+                        suffix: Some(partmsg.to_string())
+                    },
+                    None
+                );
+                let becomes_empty = srv.channels.read().part(user_uuid, chan);
+                if becomes_empty {
+                    srv.channels.write().destroy_if_empty(chan);
+                }
             }
         } else {
             send_needmoreparams(user, "PART", srv);
@@ -94,12 +97,12 @@ impl CommandHandler for CmdPart {
 
 /// Sends a RPL_NAMREPLY with the users of the given chan to me
 #[experimental]
-pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
+pub fn send_names(me: &UserData, chan: &str, srv: &ServerData) {
     let names = srv.channels.read().member_list(chan);
     let msg = IRCMessage {
         prefix: Some(srv.settings.read().name.clone()),
         command: numericreply::RPL_NAMEREPLY.to_text(),
-        args: vec!(me.nickname.clone(), "=".to_string(), chan.clone()),
+        args: vec!(me.nickname.clone(), "=".to_string(), chan.to_string()),
         suffix: None
     };
     let mut buffer = String::new();
@@ -141,7 +144,7 @@ pub fn send_names(me: &UserData, chan: &String, srv: &ServerData) {
         IRCMessage {
             prefix: Some(srv.settings.read().name.clone()),
             command: numericreply::RPL_ENDOFNAMES.to_text(),
-            args: vec!(me.nickname.clone(), chan.clone()),
+            args: vec!(me.nickname.clone(), chan.to_string()),
             suffix: Some("End of NAMES list.".to_string())
         }
     );

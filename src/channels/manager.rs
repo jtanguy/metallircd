@@ -35,8 +35,8 @@ impl ChannelManager {
     /// Does nothing if the user was already in the chan.
     /// Does nothing and returns `false` if the chan didn't exist.
     #[experimental]
-    pub fn join(&self, user: Uuid, chan: &String) -> bool {
-        match self.chans.find(&util::label_to_lower(chan.as_slice())) {
+    pub fn join(&self, user: Uuid, chan: &str) -> bool {
+        match self.chans.find(&util::label_to_lower(chan)) {
             Some(lock) => {
                 lock.write().join(user);
                 true
@@ -48,8 +48,8 @@ impl ChannelManager {
     /// Add given user to given chan, creating it if not existing.
     /// Does nothing if the user was already in the chan.
     #[experimental]
-    pub fn join_create(&mut self, user: Uuid, chan: String) {
-        match self.chans.entry(util::label_to_lower(chan.as_slice())) {
+    pub fn join_create(&mut self, user: Uuid, chan: &str) {
+        match self.chans.entry(util::label_to_lower(chan)) {
             Occupied(e) => e.get().write().join(user),
             Vacant(e) => {
                 e.set(RWLock::new(Channel::new())).write().join(user)
@@ -58,13 +58,13 @@ impl ChannelManager {
     }
 
     #[experimental]
-    pub fn has_chan(&self, chan: &String) -> bool {
+    pub fn has_chan(&self, chan: &str) -> bool {
         self.chans.contains_key(&util::label_to_lower(chan.as_slice()))
     }
 
     #[experimental]
-    pub fn is_in_chan(&self, user: &Uuid, chan: &String) -> bool {
-        match self.chans.find(&util::label_to_lower(chan.as_slice())) {
+    pub fn is_in_chan(&self, user: &Uuid, chan: &str) -> bool {
+        match self.chans.find(&util::label_to_lower(chan)) {
             Some(ref ch) => ch.read().has_member(user),
             None => false
         }
@@ -73,8 +73,8 @@ impl ChannelManager {
     /// Parts the user from given chan.
     /// Returns true if the chan is empty after this part.
     #[experimental]
-    pub fn part(&self, user: &Uuid, chan: &String) -> bool {
-        match self.chans.find(&util::label_to_lower(chan.as_slice())) {
+    pub fn part(&self, user: &Uuid, chan: &str) -> bool {
+        match self.chans.find(&util::label_to_lower(chan)) {
             Some(ch) => { ch.write().part(user); ch.read().is_empty() },
             None => false
         }
@@ -82,8 +82,8 @@ impl ChannelManager {
 
     /// Destroys the chan if existing and empty and returns true, returns false otherwise.
     #[experimental]
-    pub fn destroy_if_empty(&mut self, chan: &String) -> bool {
-        let lower_chan = util::label_to_lower(chan.as_slice());
+    pub fn destroy_if_empty(&mut self, chan: &str) -> bool {
+        let lower_chan = util::label_to_lower(chan);
         if self.chans.contains_key(&lower_chan)
            && self.chans.find(&lower_chan).unwrap().read().is_empty() {
             self.chans.remove(&lower_chan)
@@ -95,8 +95,8 @@ impl ChannelManager {
     /// Sends a message to a chan, ommiting an optionnal user.
     /// Returns false if the chan didn't exists.
     #[experimental]
-    pub fn send_to_chan(&self, users: &UserManager, chan: &String, msg: IRCMessage, exclude: Option<Uuid>) -> bool {
-        match self.chans.find(&util::label_to_lower(chan.as_slice())) {
+    pub fn send_to_chan(&self, users: &UserManager, chan: &str, msg: IRCMessage, exclude: Option<Uuid>) -> bool {
+        match self.chans.find(&util::label_to_lower(chan)) {
             None => false,
             Some(ref channel) => {
                 match exclude {
@@ -143,8 +143,8 @@ impl ChannelManager {
 
     /// Returns the member list of a chan with their best mode, as an iterator.
     #[experimental]
-    pub fn member_list(&self, chan: &String) -> Vec<(Uuid, MembershipMode)> {
-        match self.chans.find(chan) {
+    pub fn member_list(&self, chan: &str) -> Vec<(Uuid, MembershipMode)> {
+        match self.chans.find(&util::label_to_lower(chan)) {
             Some(ch) => ch.read().member_list(),
             None => Vec::new()
         }
