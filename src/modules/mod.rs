@@ -3,6 +3,7 @@
 #![experimental]
 
 use conf::ServerConf;
+use logging::Debug;
 use messages::{IRCMessage, TextMessage, numericreply};
 use scheduling::ServerData;
 use users::UserData;
@@ -82,6 +83,7 @@ impl ModulesHandler {
                 return action;
             }
         }
+        srv.logger.log(Debug, format!("Unknown command call {} by {}.", cmd.command, user.nickname));
         user.push_message(
             IRCMessage {
                 prefix: Some(srv.settings.read().name.clone()),
