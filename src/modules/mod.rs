@@ -60,6 +60,7 @@ impl ModulesHandler {
                 box core_textmessages::CmdPrivmsgOrNotice as Box<CommandHandler + Send + Sync>,
                 box core_channels::CmdJoin as Box<CommandHandler + Send + Sync>,
                 box core_channels::CmdPart as Box<CommandHandler + Send + Sync>,
+                box core_channels::CmdNames as Box<CommandHandler + Send + Sync>,
                 box core_commands::CmdNick as Box<CommandHandler + Send + Sync>,
                 box core_commands::CmdQuit as Box<CommandHandler + Send + Sync>
             ),

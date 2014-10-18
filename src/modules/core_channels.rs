@@ -95,7 +95,37 @@ impl CommandHandler for CmdPart {
     }
 }
 
+pub struct CmdNames;
+
+impl CommandHandler for CmdNames {
+    fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+        -> (bool, RecyclingAction) {
+        if cmd.command.as_slice() != "NAMES" { return (false, Nothing); }
+
+        if let Some(args) = cmd.as_nparams(1,1) {
+            for chan in args[0].as_slice().split_terminator(',') {
+                if srv.channels.read().has_chan(chan) {
+                    send_names(user, chan, srv);
+                } else {
+                    user.push_message(
+                        IRCMessage {
+                            prefix: Some(srv.settings.read().name.clone()),
+                            command: numericreply::ERR_NOSUCHNICK.to_text(),
+                            args: vec!(user.nickname.clone(), chan.to_string()),
+                            suffix: Some("No such nick/channel.".to_string())
+                        }
+                    );
+                }
+            }
+        } else {
+            send_needmoreparams(user, "PART", srv);
+        }
+        (true, Nothing)
+    }
+}
+
 /// Sends a RPL_NAMREPLY with the users of the given chan to me
+/// Assumes the chan exists.
 #[experimental]
 pub fn send_names(me: &UserData, chan: &str, srv: &ServerData) {
     let names = srv.channels.read().member_list(chan);
