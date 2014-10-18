@@ -2,6 +2,7 @@
 
 #![experimental]
 
+use std::cmp::min;
 use std::from_str::FromStr;
 
 #[deriving(Show, PartialEq, Clone)]
@@ -43,6 +44,53 @@ impl IRCMessage {
         + if let Some(ref s) = self.prefix { s.len() } else { 0 }
         + self.args.iter().fold(0, |n, s| n + 1 + s.len())
         + if let Some(ref s) = self.suffix { s.len() } else { 0 }
+    }
+
+    /// Attemps to parse parameters of the Message a `needed` necessary
+    /// parameters and `optionnal` optionnal parameters. Returning `None`
+    /// if there were not enough parmeters to fullfill `needed`.
+    #[experimental]
+    pub fn as_nparams(&self, needed: uint, optionnal: uint)
+            -> Option<Vec<String> > {
+
+        // Skips the first `skip` arguments and merge the rest as one big string
+        fn skip_and_fuse(m: &IRCMessage, skip: uint) -> String {
+            let mut result = String::new();
+            let mut it = m.args.iter().skip(skip);
+            match it.next() {
+                Some(ref txt) => { result.push_str(txt.as_slice()) },
+                _ => {}
+            }
+            for txt in it {
+                result.push_str(" ");
+                result.push_str(txt.as_slice());
+            }
+            match m.suffix {
+                Some(ref txt) => {
+                    if result.len() > 0 { result.push_str(" "); }
+                    result.push_str(txt.as_slice());
+                }
+                _ => {}
+            }
+            result
+        }
+
+        let available = self.args.len() + self.suffix.is_some() as uint;
+        let taking = min(available, needed + optionnal);
+
+        if available < needed {
+            return None
+        }
+
+        let mut params = Vec::new();
+
+        if taking == 0 { return Some(params); }
+
+        for i in range(0u, taking - 1) {
+            params.push(self.args[i].clone());
+        }
+        params.push(skip_and_fuse(self, taking - 1));
+        Some(params)
     }
 
 }
