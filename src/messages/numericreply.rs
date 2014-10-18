@@ -26,7 +26,7 @@ pub enum NumericReply {
     // Away related
     RPL_AWAY            = 301,
     RPL_UNAWAY          = 305,
-    RPL_NOAWAY          = 306,
+    RPL_NOWAWAY         = 306,
     // Whois related
     RPL_WHOISUSER       = 311,
     RPL_WHOISSERVER     = 312,

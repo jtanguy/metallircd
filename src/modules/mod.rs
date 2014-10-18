@@ -83,6 +83,8 @@ mod core_textmessages;
 mod core_commands;
 mod core_channels;
 
+mod away;
+
 /// Special actions to be performed by the recycler thread
 #[experimental]
 #[deriving(PartialEq)]
@@ -130,6 +132,7 @@ impl ModulesHandler {
                 core_channels::CmdJoin,
                 core_channels::CmdPart,
                 core_channels::CmdNames,
+                away::ModAway::init(),
                 core_commands::CmdNick,
                 core_commands::CmdQuit,
                 core_textmessages::QueryDispatcher,
