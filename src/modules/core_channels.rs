@@ -118,7 +118,7 @@ impl CommandHandler for CmdNames {
                 }
             }
         } else {
-            send_needmoreparams(user, "PART", srv);
+            send_needmoreparams(user, "NAMES", srv);
         }
         (true, Nothing)
     }
