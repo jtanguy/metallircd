@@ -18,7 +18,7 @@ use modules;
 
 use uuid::Uuid;
 
-use logging::Info;
+use logging::Debug;
 use users;
 
 use super::ServerData;
@@ -32,7 +32,10 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
             let mut inc_list = DList::new();
             loop {
                 // There is no problem with brutally closing not-yet established connections.
-                if *srv.signal_shutdown.read() { let _ = acceptor.close_accept(); return }
+                if *srv.signal_shutdown.read() {
+                    let _ = acceptor.close_accept();
+                    return
+                }
                 acceptor.set_timeout(Some(50));
                 match acceptor.accept() {
                     Ok(mut socket) => {
@@ -64,7 +67,7 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                                     my_user.get_fullname().as_slice()))
                                     }
                                 );
-                                srv.logger.log(Info,
+                                srv.logger.log(Debug,
                                     format!("New user {} with UUID {}.", my_user.get_fullname(), id));
                                 srv.queue_users_torecycle.push((id, modules::Nothing));
                             },
@@ -92,12 +95,7 @@ pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stea
             loop {
                 match recycled_stealer.steal() {
                     deque::Data(id) => {
-                        let action = if *srv.signal_shutdown.read() {
-                            disconnect_user(&id, &*srv, "Server shutdown.");
-                            modules::Nothing
-                        } else {
-                            handle_user(&id, &*srv)
-                        };
+                        let action = handle_user(&id, &*srv);
                         srv.queue_users_torecycle.push((id, action));
                     }
                     _ => if *srv.signal_shutdown.read() {
@@ -168,11 +166,10 @@ TaskBuilder::new().named("Logger").try_future({
                     return
                 }
             };
-            srv.logger.log(Info, format!("Initialised logging with level {}", srv.logger.level));
             loop {
                 while match srv.logger.pop() {
                     Some(line) => { let _ = file.write_line(line.as_slice()); true },
-                    None => false
+                    None => if *srv.signal_shutdown.read() { return; } else { false }
                 } { /* empty loop body */}
                 let _ = file.datasync();
                 sleep(Duration::milliseconds(200));

@@ -2,7 +2,7 @@ use super::ServerData;
 
 use modules::{RecyclingAction, Nothing, Zombify, ChangeNick};
 
-use logging::Info;
+use logging::Debug;
 
 use std::io;
 
@@ -103,7 +103,7 @@ pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
 /// Recycles a disconnected user.
 #[experimental]
 pub fn destroy_user(id: &Uuid, srv: &ServerData) {
-    srv.logger.log(Info, format!("Recycling user {}", id));
+    srv.logger.log(Debug, format!("Recycling user {}", id));
     srv.users.write().del_user(id);
     // TODO save historyfor WHOWAS
 }

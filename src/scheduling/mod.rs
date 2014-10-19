@@ -3,7 +3,7 @@
 #![experimental]
 
 use channels::ChannelManager;
-use logging::Logger;
+use logging::{Logger, Info};
 use conf::ServerConf;
 use users::UserManager;
 use modules::{ModulesHandler, RecyclingAction};
@@ -34,13 +34,13 @@ pub struct ServerData {
 impl ServerData {
 
     pub fn new(settings: ServerConf)-> ServerData {
-        let loglevel = settings.loglevel;
-        let modules_hdlr = ModulesHandler::init(&settings);
+        let logger = Logger::new(settings.loglevel);
+        let modules_hdlr = ModulesHandler::init(&settings, &logger);
         ServerData {
             settings: RWLock::new(settings),
             users: RWLock::new(UserManager::new()),
             channels: RWLock::new(ChannelManager::new()),
-            logger: Logger::new(loglevel),
+            logger: logger,
             queue_users_torecycle: MPSCQueue::new(),
             signal_shutdown: RWLock::new(false),
             modules_handler: RWLock::new(modules_hdlr)
@@ -63,9 +63,13 @@ pub fn run_server(srv: ServerData, acceptor: TcpAcceptor) {
     );
 
     // client handlers
-    thread_handles.push(
-        procs::spawn_clients_handler(arc_srv.clone(), user_recycled_stealer, 1u)
-    );
+    for i in range(1u, arc_srv.settings.read().thread_handler_count) {
+        thread_handles.push(
+            procs::spawn_clients_handler(arc_srv.clone(), user_recycled_stealer.clone(), i)
+        );
+    }
+
+    arc_srv.logger.log(Info, format!("Initialised {} clients hanlders.",arc_srv.settings.read().thread_handler_count));
 
     // clients recycler
     thread_handles.push(

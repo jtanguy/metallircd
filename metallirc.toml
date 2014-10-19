@@ -5,3 +5,6 @@ port = 6667
 
 [logging]
 level = "Info"
+
+[threads]
+workers = 2

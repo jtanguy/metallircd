@@ -28,10 +28,12 @@ impl Logger {
     /// Creates a new logger, to be shared betweens tasks.
     #[experimental]
     pub fn new(level: LogLevel) -> Logger {
-        Logger {
+        let logger = Logger {
             queue: MPSCQueue::new(),
             level: level
-        }
+        };
+        logger.log(Info, format!("Initialised logging with level {}", level));
+        logger
     }
 
     /// Adds a new entry to the logs.
