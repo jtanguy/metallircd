@@ -38,7 +38,8 @@ impl $enum_name {
 //
 
 def_modes!(UserMode,
-    (UInvisible,            'i', 0x0000000000000001)
+    (UInvisible,            'i', 0x0000000000000001),
+    (UOperator,             'o', 0x0000000000000002)
 )
 
 //

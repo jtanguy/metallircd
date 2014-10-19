@@ -3,6 +3,11 @@ server_name = "irc.example.com"
 address = "127.0.0.1"
 port = 6667
 
+operators = [
+    ["login1", "password1"],
+    ["login2", "password2"]
+]
+
 [logging]
 level = "Info"
 

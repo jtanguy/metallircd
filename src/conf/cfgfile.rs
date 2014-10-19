@@ -103,5 +103,7 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
         _ => {}
     }
 
+    config.table = toml_table;
+
     Ok(config)
 }

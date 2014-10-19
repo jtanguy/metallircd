@@ -3,7 +3,7 @@
 #![experimental]
 
 use conf::ServerConf;
-use logging::Debug;
+use logging::{Logger, Debug};
 use messages::{IRCMessage, TextMessage, numericreply};
 use scheduling::ServerData;
 use users::UserData;
@@ -82,6 +82,7 @@ macro_rules! init_modules {
 mod core_textmessages;
 mod core_commands;
 mod core_channels;
+mod core_oper;
 
 mod away;
 
@@ -123,7 +124,7 @@ pub struct ModulesHandler {
 impl ModulesHandler {
     #[experimental]
     #[allow(unused_variable)] // conf might be used ?
-    pub fn init(conf: &ServerConf) -> ModulesHandler {
+    pub fn init(conf: &ServerConf, logger: &Logger) -> ModulesHandler {
         // Put the modules here for them to be loaded
         ModulesHandler {
             modules: init_modules!(
@@ -133,10 +134,12 @@ impl ModulesHandler {
                 core_channels::CmdPart,
                 core_channels::CmdNames,
                 away::ModAway::init(),
+                core_oper::CmdOper::init(conf, logger),
                 core_commands::CmdNick,
                 core_commands::CmdQuit,
                 core_textmessages::QueryDispatcher,
-                core_textmessages::ChannelDispatcher
+                core_textmessages::ChannelDispatcher,
+                core_oper::CmdDie
             )
         }
     }

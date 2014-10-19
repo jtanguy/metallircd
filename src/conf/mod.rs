@@ -6,6 +6,9 @@ use logging::{LogLevel, Warning};
 
 pub use self::cfgfile::load_config;
 
+use std::collections::TreeMap;
+use toml::TomlTable;
+
 mod cfgfile;
 
 #[experimental]
@@ -20,7 +23,10 @@ pub struct ServerConf {
     pub logfile: Path,
 
     // threads
-    pub thread_handler_count: uint
+    pub thread_handler_count: uint,
+
+    // rest of the config file
+    pub table: TomlTable
 }
 
 #[experimental]
@@ -38,7 +44,10 @@ impl ServerConf {
             logfile: from_str("./metallirc.log").unwrap(),
 
             // threads
-            thread_handler_count: 2u
+            thread_handler_count: 2u,
+
+            // rest of the config file
+            table: TreeMap::new()
         }
     }
 

@@ -8,6 +8,7 @@ use std::sync::{Mutex, MutexGuard, RWLock};
 use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use messages::IRCMessage;
+use modes::UserMode;
 
 use util;
 
@@ -22,6 +23,7 @@ pub struct UserData {
     pub username: String,
     pub hostname: String,
     pub realname: String,
+    pub modes: RWLock<UserMode>,
     /// is this user disconnected ?
     zombie: RWLock<bool>
 }
@@ -81,6 +83,7 @@ impl UserData {
             username: username,
             hostname: hostname,
             realname: realname,
+            modes: RWLock::new(UserMode::empty()),
             zombie: RWLock::new(false)
         }
     }
