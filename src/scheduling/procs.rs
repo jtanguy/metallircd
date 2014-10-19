@@ -15,6 +15,7 @@ use std::time::duration::Duration;
 
 use messages::{numericreply, IRCMessage};
 use modules;
+use modules::RecyclingAction;
 
 use uuid::Uuid;
 
@@ -27,7 +28,8 @@ use super::users_handling::{handle_user, destroy_user, recycle_user, disconnect_
 /// Spawns the new client thread handler on given acceptor.
 #[experimental]
 pub fn spawn_newclients_handler(srv: Arc<ServerData>,
-                                mut acceptor: TcpAcceptor)
+                                mut acceptor: TcpAcceptor,
+                                to_recycle_sender: Sender<(Uuid, RecyclingAction)>)
                                 -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named("New Clients Handler").try_future({
         proc() {
@@ -71,7 +73,7 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                 );
                                 srv.logger.log(Debug,
                                     format!("New user {} with UUID {}.", my_user.get_fullname(), id));
-                                srv.queue_users_torecycle.push((id, modules::Nothing));
+                                to_recycle_sender.send((id, modules::Nothing));
                             },
                             Err(mut nu) => {
                                 // nick was already in use !
@@ -91,7 +93,8 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
 
 /// Spawns a client handler thread and labels it with given number.
 #[experimental]
-pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stealer<Uuid>, number: uint)
+pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stealer<Uuid>,
+                             to_recycle_sender: Sender<(Uuid, RecyclingAction)>, number: uint)
                               -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named(format!("Client handler {}", number)).try_future({
         // copy my data
@@ -100,7 +103,7 @@ pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stea
                 match recycled_stealer.steal() {
                     deque::Data(id) => {
                         let action = handle_user(&id, &*srv);
-                        srv.queue_users_torecycle.push((id, action));
+                        to_recycle_sender.send((id, action));
                     }
                     _ => if *srv.signal_shutdown.read() {
                         return;
@@ -116,14 +119,15 @@ pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stea
 }
 
 
-pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Worker<Uuid>)
+pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Worker<Uuid>,
+                              to_recycle_receiver: Receiver<(Uuid, RecyclingAction)>)
                               -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named("Client recycler").try_future({
         // the proc
         proc() {
             loop {
-                match srv.queue_users_torecycle.casual_pop() {
-                    Some((id, action)) => {
+                match to_recycle_receiver.try_recv() {
+                    Ok((id, action)) => {
                         if *srv.signal_shutdown.read() {
                             // just in case
                             disconnect_user(&id, &*srv, "Server shutdown.");
@@ -143,7 +147,8 @@ pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Work
                         }
 
                     }
-                    None => if *srv.signal_shutdown.read() && (*srv.users.read()).is_empty() {
+                    Err(e) => if (*srv.signal_shutdown.read() && (*srv.users.read()).is_empty()) ||
+                            e == ::std::comm::Disconnected {
                         // cleanup is finished
                         return;
                     } else {

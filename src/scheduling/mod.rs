@@ -19,10 +19,9 @@ use channels::ChannelManager;
 use logging::{Logger, Info};
 use conf::ServerConf;
 use users::UserManager;
-use modules::{ModulesHandler, RecyclingAction};
+use modules::ModulesHandler;
 
 use std::io::net::tcp::TcpAcceptor;
-use std::sync::mpsc_queue::Queue as MPSCQueue;
 use std::sync::{Arc, deque, RWLock};
 
 use uuid::Uuid;
@@ -38,7 +37,6 @@ pub struct ServerData {
     pub channels: RWLock<ChannelManager>,
 
     pub logger: Logger,
-    pub queue_users_torecycle: MPSCQueue<(Uuid, RecyclingAction)>,
     pub signal_shutdown: RWLock<bool>,
 
     pub modules_handler: RWLock<ModulesHandler>
@@ -56,7 +54,6 @@ impl ServerData {
             users: RWLock::new(UserManager::new()),
             channels: RWLock::new(ChannelManager::new()),
             logger: logger,
-            queue_users_torecycle: MPSCQueue::new(),
             signal_shutdown: RWLock::new(false),
             modules_handler: RWLock::new(modules_hdlr)
         }
@@ -70,26 +67,30 @@ pub fn run_server(srv: ServerData, acceptor: TcpAcceptor) {
 
     let user_recycled_buffer: deque::BufferPool<Uuid> = deque::BufferPool::new();
     let (user_recycled_worker, user_recycled_stealer) = user_recycled_buffer.deque();
+    let (to_recycle_sender, to_recycle_receiver) = channel();
 
     let mut thread_handles = Vec::new();
 
     // new clients handler
     thread_handles.push(
-        procs::spawn_newclients_handler(arc_srv.clone(), acceptor)
+        procs::spawn_newclients_handler(arc_srv.clone(), acceptor, to_recycle_sender.clone())
     );
 
     // client handlers
     for i in range(1u, arc_srv.settings.read().thread_handler_count) {
         thread_handles.push(
-            procs::spawn_clients_handler(arc_srv.clone(), user_recycled_stealer.clone(), i)
+            procs::spawn_clients_handler(arc_srv.clone(), user_recycled_stealer.clone(), to_recycle_sender.clone(), i)
         );
     }
+
+    // Avoid deadlock ;-)
+    drop(to_recycle_sender);
 
     arc_srv.logger.log(Info, format!("Initialised {} clients hanlders.",arc_srv.settings.read().thread_handler_count));
 
     // clients recycler
     thread_handles.push(
-        procs::spawn_clients_recycler(arc_srv.clone(), user_recycled_worker)
+        procs::spawn_clients_recycler(arc_srv.clone(), user_recycled_worker, to_recycle_receiver)
     );
 
     // logger
