@@ -1,5 +1,7 @@
 //! Various utility functions.
 
+#![experimental]
+
 use std::io::{BufferedStream, IoResult};
 use std::io::net::tcp::TcpStream;
 
@@ -29,6 +31,7 @@ pub fn check_label(label: &str) -> bool {
 }
 
 /// Checks if a chan name (including prefix) is valid
+#[experimental]
 pub fn check_channame(mask: &str) -> bool {
     mask.starts_with("#") && check_label(mask.slice_from(1))
 }

@@ -66,6 +66,8 @@ pub fn disconnect_user(id: &Uuid, srv: &ServerData, reason: &str) {
     pu.zombify();
 }
 
+/// Perform a recycling action on given user.
+#[experimental]
 pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
     match action {
         ChangeNick(new_nick) => {

@@ -1,5 +1,22 @@
 //! Base of modules system.
 
+//! Here is the machinery handling the module system.
+//!
+//! A module can implement two traits (even both):
+//!
+//! - `CommandHandler` if it handles one or more commands
+//! - `MessageSendingHandler` if it affects the transmission of a message.
+//!
+//! Such traits must be declared using the `module!(..)` macro like this:
+//!
+//! ```
+//! module!(MyModule is CommandHandler, MessageSendingHandler)
+//! ```
+//!
+//! These are not *real* modules in the sense of they are not dynamically loaded,
+//! but they provide a common generic interface for handling commands and messages
+//! in an elegant way.
+
 #![experimental]
 
 use conf::ServerConf;
@@ -22,6 +39,7 @@ use std::intrinsics::TypeId;
 use std::mem::{size_of, transmute};
 use std::raw::TraitObject;
 
+#[doc(hidden)]
 trait Module: 'static {
     // HACK(eddyb) Missing upcast to Any to make this clean.
     fn get_type_id(&self) -> TypeId { TypeId::of::<&'static Self>() }
@@ -42,6 +60,7 @@ macro_rules! module {
     )
 }
 
+#[doc(hidden)]
 trait ModuleRef<'a> {
     fn as_ref<Sized? T>(self) -> Option<&'a T>;
 }
@@ -86,7 +105,7 @@ mod core_oper;
 
 mod away;
 
-/// Special actions to be performed by the recycler thread
+/// Special actions to be performed by the recycler thread (requiring `&mut` access to the UserManager).
 #[experimental]
 #[deriving(PartialEq)]
 pub enum RecyclingAction {
@@ -117,11 +136,15 @@ pub trait MessageSendingHandler : Send + Sync {
     fn handle_message_sending(&self, msg: TextMessage, srv: &ServerData) -> Option<TextMessage>;
 }
 
+/// The modules handler.
+///
+/// It owns all modules instances and dispatches commands and messages to them.
 pub struct ModulesHandler {
     modules: Vec<Box<Module + 'static + Send + Sync>>,
 }
 
 impl ModulesHandler {
+    /// This method initialises all modules. It should be edited to add new modules.
     #[experimental]
     #[allow(unused_variable)] // conf might be used ?
     pub fn init(conf: &ServerConf, logger: &Logger) -> ModulesHandler {
@@ -185,6 +208,9 @@ impl ModulesHandler {
     }
 }
 
+/// Shortcut command for modules: sends to the user a "Not enought parameters" message
+/// associated with given command.
+#[experimental]
 pub fn send_needmoreparams(u: &UserData, cmd: &str, srv: &ServerData) {
     u.push_message(
         IRCMessage {

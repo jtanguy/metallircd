@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use super::IRCMessage;
 
+/// Represents an entity which can send or receive messages.
 #[deriving(Clone)]
 #[experimental]
 pub enum Actor {
@@ -16,6 +17,7 @@ pub enum Actor {
 }
 
 impl Actor {
+    /// String representation of the actor.
     pub fn into_text(self) -> String{
         match self {
             Channel(s) => s,
@@ -26,6 +28,7 @@ impl Actor {
     }
 }
 
+/// Represents a text message, either a PRIVMSG or a NOTICE.
 #[experimental]
 pub struct TextMessage {
     pub notice: bool,

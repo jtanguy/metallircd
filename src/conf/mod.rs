@@ -25,7 +25,7 @@ pub struct ServerConf {
     // threads
     pub thread_handler_count: uint,
 
-    // rest of the config file
+    /// Contains the toml table of the config file, to be used by each module.
     pub table: TomlTable
 }
 

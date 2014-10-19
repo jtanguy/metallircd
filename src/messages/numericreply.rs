@@ -4,7 +4,7 @@
 
 use super::IRCMessage;
 
-/// Lists all possible numerical answers from server
+/// Lists all possible numerical answers from the server.
 #[allow(non_camel_case_types)]
 #[deriving(Show,PartialEq,FromPrimitive)]
 #[repr(uint)]
@@ -176,6 +176,7 @@ pub enum NumericReply {
 #[experimental]
 impl NumericReply {
 
+    /// Attemps to extract the numeric reply from an `IRCMessage`.
     #[experimental]
     pub fn from_ircmessage(msg: &IRCMessage) -> Option<NumericReply> {
         match from_str::<uint>(msg.command.as_slice()) {
@@ -184,6 +185,7 @@ impl NumericReply {
         }
     }
 
+    /// 3 digit string representing the numeric reply.
     #[experimental]
     pub fn to_text(self) -> String {
         format!("{:03u}", self as uint)

@@ -6,6 +6,7 @@ use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use time::now;
 
+/// Various available loglevels.
 #[experimental]
 #[deriving(Show)]
 pub enum LogLevel {

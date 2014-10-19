@@ -1,4 +1,6 @@
-//! chan handling module.
+//! Chan handling module.
+
+//! This module contains the logic for managing channels and their members.
 
 #![experimental]
 

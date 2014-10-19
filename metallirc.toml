@@ -1,15 +1,22 @@
 [ircd]
+# The name the server will use in its messages.
 server_name = "irc.example.com"
+# The address and port to listen to.
 address = "127.0.0.1"
 port = 6667
 
+# List of allowed IRC operators
 operators = [
     ["login1", "password1"],
     ["login2", "password2"]
 ]
 
 [logging]
+# Loglevel of the server: Error, Warning, Info or Debug
 level = "Info"
+# File to log to
+file = "metallirc.log"
 
 [threads]
+# Number of worker threads for client handling.
 workers = 2

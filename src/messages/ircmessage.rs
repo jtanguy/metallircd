@@ -5,6 +5,7 @@
 use std::cmp::min;
 use std::from_str::FromStr;
 
+/// Represents an IRC protocol message.
 #[deriving(Show, PartialEq, Clone)]
 pub struct IRCMessage {
     pub prefix: Option<String>,
@@ -37,7 +38,7 @@ impl IRCMessage {
         output
     }
 
-    /// Computes the len of the message in protocol form
+    /// Computes the len of the message in protocol form.
     #[experimental]
     pub fn protocol_len(&self) -> uint {
         self.command.len()
@@ -97,6 +98,7 @@ impl IRCMessage {
 
 impl FromStr for IRCMessage {
 
+    /// Creates an IRCMessage from protocol String.
     fn from_str(s: &str) -> Option<IRCMessage> {
         // These chars are forbidden by the protocol
         // Or there is not only one line

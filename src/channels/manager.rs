@@ -16,6 +16,9 @@ use util;
 use users::UserManager;
 
 /// The channel manager.
+///
+/// Only one is to be created for in a server. It handles the channels and provides
+/// a simple interface for its usage in the rest of the server.
 #[experimental]
 pub struct ChannelManager {
     chans: HashMap<String, RWLock<Channel>>
@@ -24,6 +27,7 @@ pub struct ChannelManager {
 #[experimental]
 impl ChannelManager {
 
+    /// Creates a new ChannelManager.
     #[experimental]
     pub fn new() -> ChannelManager {
         ChannelManager {
@@ -57,11 +61,13 @@ impl ChannelManager {
         }
     }
 
+    /// Returns `true` if the channel exists.
     #[experimental]
     pub fn has_chan(&self, chan: &str) -> bool {
         self.chans.contains_key(&util::label_to_lower(chan.as_slice()))
     }
 
+    /// Returns `true` if given user is in given chan.
     #[experimental]
     pub fn is_in_chan(&self, user: &Uuid, chan: &str) -> bool {
         match self.chans.find(&util::label_to_lower(chan)) {
@@ -92,7 +98,7 @@ impl ChannelManager {
         }
     }
 
-    /// Sends a message to a chan, ommiting an optionnal user.
+    /// Sends a message to a chan, ommiting an optional user.
     /// Returns false if the chan didn't exists.
     #[experimental]
     pub fn send_to_chan(&self, users: &UserManager, chan: &str, msg: IRCMessage, exclude: Option<Uuid>) -> bool {
@@ -112,7 +118,7 @@ impl ChannelManager {
         }
     }
 
-    /// Set of all Uuid having at least one chan in common with given Uuid, including itself.
+    /// Set of all user Uuid having at least one chan in common with given user Uuid, including itself.
     #[experimental]
     pub fn known_by_uuid(&self, user: &Uuid) -> HashSet<Uuid> {
         let mut set = HashSet::new();

@@ -1,5 +1,18 @@
 //! Scheduling operations.
 
+//! This module contains the main threads handling the whole server workflow.
+//!
+//! This workflow is currently:
+//!
+//! - A thread handling new connections and putting them in the main workflow once
+//!   negociation procedure is succesfully finished.
+//! - Several (depending on configuration) threads handling user I/O: handling user
+//!   commands and sending them all message they should receive.
+//! - A recycler thread putting clients back in the loop after their have been handled.
+//!   Also does "eavy" operations on users requiring `&mut` acces to the usermanager
+//!   (currently nickname changing and user deletion).
+//! - A logger thread handling server logging system.
+
 #![experimental]
 
 use channels::ChannelManager;
@@ -17,6 +30,7 @@ use uuid::Uuid;
 mod users_handling;
 mod procs;
 
+/// Contains all data of the server in a way that is safe to be shared between the server threads.
 #[experimental]
 pub struct ServerData {
     pub settings: RWLock<ServerConf>,
@@ -33,6 +47,7 @@ pub struct ServerData {
 #[experimental]
 impl ServerData {
 
+    /// Creates the server data structure from a config.
     pub fn new(settings: ServerConf)-> ServerData {
         let logger = Logger::new(settings.loglevel);
         let modules_hdlr = ModulesHandler::init(&settings, &logger);
@@ -48,6 +63,7 @@ impl ServerData {
     }
 }
 
+/// Runs the server on given server data.
 pub fn run_server(srv: ServerData, acceptor: TcpAcceptor) {
 
     let arc_srv = Arc::new(srv);

@@ -24,6 +24,8 @@ use users;
 use super::ServerData;
 use super::users_handling::{handle_user, destroy_user, recycle_user, disconnect_user};
 
+/// Spawns the new client thread handler on given acceptor.
+#[experimental]
 pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                 mut acceptor: TcpAcceptor)
                                 -> Future<Result<(), Box<Any + Send>>> {
@@ -87,6 +89,8 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
     })
 }
 
+/// Spawns a client handler thread and labels it with given number.
+#[experimental]
 pub fn spawn_clients_handler(srv: Arc<ServerData>, recycled_stealer: deque::Stealer<Uuid>, number: uint)
                               -> Future<Result<(), Box<Any + Send>>> {
     TaskBuilder::new().named(format!("Client handler {}", number)).try_future({
