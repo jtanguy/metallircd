@@ -26,7 +26,7 @@ impl CommandHandler for CmdPrivmsgOrNotice {
 
         if let Some(args) = cmd.as_nparams(2, 0) {
 
-            if let Some(id) = srv.users.read().get_uuid_of_nickname(&args[0]) {
+            if let Some(id) = srv.users.read().get_uuid_of_nickname(args[0].as_slice()) {
                 srv.modules_handler.read().send_message(
                     TextMessage {
                         notice: notice,

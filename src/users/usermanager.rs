@@ -65,15 +65,15 @@ impl UserManager {
     }
 
     #[experimental]
-    pub fn get_uuid_of_nickname(&self, nick: &String) -> Option<Uuid> {
-        self.nicks.find(&util::label_to_lower(nick.as_slice())).map(|id| id.clone())
+    pub fn get_uuid_of_nickname(&self, nick: &str) -> Option<Uuid> {
+        self.nicks.find(&util::label_to_lower(nick)).map(|id| id.clone())
     }
 
     #[experimental]
-    pub fn get_user_by_nickname<'a>(&'a self, nick: &String) -> Option<&'a UserData> {
+    pub fn get_user_by_nickname<'a>(&'a self, nick: &str) -> Option<&'a UserData> {
         // we should *never* have a nick for a unexistent user
         // so .unwrap() should *never* fail
-        self.nicks.find(&util::label_to_lower(nick.as_slice())).map(|id| self.users.find(id).unwrap())
+        self.nicks.find(&util::label_to_lower(nick)).map(|id| self.users.find(id).unwrap())
     }
 
     /// Changes the nickname of given uuid.
