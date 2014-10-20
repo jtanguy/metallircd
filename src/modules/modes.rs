@@ -51,7 +51,9 @@ impl CommandHandler for CmdMode {
                     );
                 }
             } else if let Some(chan) = srv.channels.read().chan_handle(args[0].as_slice()) {
-                if chan.read().has_member(user_uuid) {
+                // avoid deadlock
+                let has_member = chan.read().has_member(user_uuid);
+                if has_member {
                     if args.len() == 1 {
                         // only checking modes
                         user.push_message(
@@ -73,7 +75,23 @@ impl CommandHandler for CmdMode {
                         );
                     } else {
                         // Trying to make modifications
-                        update_chan_mode(&mut *chan.write(), args, srv);
+                        // avoid deadlock
+                        let is_oper = chan.read().has_mode(user_uuid, modes::MOp);
+                        if is_oper || user.modes.read().contains(modes::UOperator) {
+                            let messages = update_chan_mode(user, &mut *chan.write(), &args, srv);
+                            for m in messages.into_iter() {
+                                srv.channels.read().send_to_chan(&*srv.users.read(), args[0].as_slice(), m, None);
+                            }
+                        } else {
+                            user.push_message(
+                                IRCMessage {
+                                    prefix: Some(srv.settings.read().name.clone()),
+                                    command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
+                                    args: vec!(user.nickname.clone(), args[0].clone()),
+                                    suffix: Some("You're not channel operator.".to_string())
+                                }
+                            );
+                        }
                     }
                 } else {
                     user.push_message(
@@ -154,6 +172,74 @@ fn update_user_mode(user: &UserData, args: Vec<String>, srv: &ServerData) {
     }
 }
 
-fn update_chan_mode(chan: &mut Channel, args: Vec<String>, srv: &ServerData) {
-    // TODO
+fn update_chan_mode(user: &UserData,
+                    chan: &mut Channel, args: &Vec<String>,
+                    srv: &ServerData) -> Vec<IRCMessage> {
+    let mut messages = Vec::new();
+    let mut words = args.iter();
+    while let Some(ref txt) = words.next() {
+        let mut chars = txt.as_slice().chars();
+        let remove = match chars.next() {
+            Some('+') => false,
+            Some('-') => true,
+            _ => continue
+        };
+        for c in chars {
+            if modes::mmodes.contains_char(c) {
+            if let Some(nick) = words.next() {
+                // It is a membership mode and we have a nick given
+                // If no nick is given we ignore it
+                if let Some(id) = srv.users.read().get_uuid_of_nickname(nick.as_slice()) {
+                    let result = if remove {
+                        chan.remove_mode_from(&id, modes::MembershipMode::from_char(c).unwrap())
+                    } else {
+                        chan.add_mode_to(&id, modes::MembershipMode::from_char(c).unwrap())
+                    };
+                    if result {
+                        messages.push(
+                            IRCMessage {
+                                prefix: Some(user.get_fullname()),
+                                command: "MODE".to_string(),
+                                args: vec!(
+                                    args[0].clone(),
+                                    format!("{}{}", if remove { "-" } else { "+" }.to_string(), c),
+                                    nick.clone()
+                                    ),
+                                suffix: None
+                            }
+                        );
+                    } else {
+                        user.push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_USERNOTINCHANNEL.to_text(),
+                                args: vec!(user.nickname.clone(), nick.clone(), args[0].clone()),
+                                suffix: Some("They aren't on that channel.".to_string())
+                            }
+                        );
+                    }
+                } else {
+                    user.push_message(
+                        IRCMessage {
+                            prefix: Some(srv.settings.read().name.clone()),
+                            command: numericreply::ERR_NOSUCHNICK.to_text(),
+                            args: vec!(user.nickname.clone(), nick.clone()),
+                            suffix: Some("No such nick/channel.".to_string())
+                        }
+                    );
+                }
+            }} else {
+                user.push_message(
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_UNKNOWNMODE.to_text(),
+                        args: vec!(user.nickname.clone(), c.to_string()),
+                        suffix: Some(format!("is unknown mode char to me for {}", args[0]))
+                    }
+                );
+            }
+        }
+
+    }
+    messages
 }

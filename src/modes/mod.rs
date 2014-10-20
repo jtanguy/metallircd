@@ -66,9 +66,10 @@ def_modes!(ChanMode,
 // Should be kept by order of importance
 def_modes!(MembershipMode,
     (MVoice,                'v', 0x0000000000000001),
-    (MHalfOp,               'h', 0x0000000000000002),
     (MOp,                   'o', 0x0000000000000004)
 )
+
+pub static mmodes: &'static str = "vo";
 
 impl MembershipMode {
 
@@ -93,8 +94,6 @@ impl MembershipMode {
     pub fn prefix(&self) -> Option<char> {
         if self.contains(MOp) {
             Some('@')
-        } else if self.contains(MHalfOp) {
-            Some('%')
         } else if self.contains(MVoice) {
             Some('+')
         } else {

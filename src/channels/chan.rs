@@ -118,4 +118,30 @@ impl Channel {
         self.members.keys()
     }
 
+    /// Checks if given user has given mode
+    #[experimental]
+    pub fn has_mode(&self, uuid: &Uuid, mode: MembershipMode) -> bool {
+        self.members.find(uuid).map(|m| m.contains(mode)).unwrap_or(false)
+    }
+
+    /// Adds given mode to given user. Returns false if the user was
+    /// not in the channel.
+    #[experimental]
+    pub fn add_mode_to(&mut self, uuid: &Uuid, mode: MembershipMode) -> bool {
+        match self.members.find_mut(uuid) {
+            Some(ref mut m) => { m.insert(mode); true },
+            None => { false }
+        }
+    }
+
+    /// Removes given mode from given user. Returns false if the user was
+    /// not in the channel.
+    #[experimental]
+    pub fn remove_mode_from(&mut self, uuid: &Uuid, mode: MembershipMode) -> bool {
+        match self.members.find_mut(uuid) {
+            Some(ref mut m) => { m.remove(mode); true },
+            None => { false }
+        }
+    }
+
 }
