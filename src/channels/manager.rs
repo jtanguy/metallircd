@@ -130,6 +130,12 @@ impl ChannelManager {
         set
     }
 
+    /// Returns a handle to given chan
+
+    pub fn chan_handle<'a>(&'a self, chan: &str) -> Option<&'a RWLock<Channel>> {
+        self.chans.find(&util::label_to_lower(chan.as_slice()))
+    }
+
     /// Parts the user from all chans and advertise everybody he knows.
     /// Returns a vec of the chans left empty by its departure.
     #[experimental]

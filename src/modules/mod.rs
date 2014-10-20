@@ -104,6 +104,7 @@ mod core_channels;
 mod core_oper;
 
 mod away;
+mod modes;
 
 /// Special actions to be performed by the recycler thread (requiring `&mut` access to the UserManager).
 #[experimental]
@@ -156,6 +157,7 @@ impl ModulesHandler {
                 core_channels::CmdJoin,
                 core_channels::CmdPart,
                 core_channels::CmdNames,
+                modes::CmdMode,
                 away::ModAway::init(),
                 core_oper::CmdOper::init(conf, logger),
                 core_commands::CmdNick,

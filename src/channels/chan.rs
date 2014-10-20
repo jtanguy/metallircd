@@ -7,13 +7,14 @@ use std::collections::hashmap::Keys;
 
 use uuid::Uuid;
 
-use modes::MembershipMode;
+use modes::{MembershipMode, ChanMode};
 
 /// A channel.
 #[experimental]
 pub struct Channel {
     topic: String,
-    members: HashMap<Uuid, MembershipMode>
+    members: HashMap<Uuid, MembershipMode>,
+    pub modes: ChanMode
 }
 
 #[experimental]
@@ -24,7 +25,8 @@ impl Channel {
     pub fn new() -> Channel {
         Channel {
             topic: String::new(),
-            members: HashMap::new()
+            members: HashMap::new(),
+            modes: ChanMode::empty()
         }
     }
 

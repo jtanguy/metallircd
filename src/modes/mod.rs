@@ -22,6 +22,12 @@ impl $enum_name {
         }
     }
 
+    pub fn to_modestring(&self) -> String {
+        let mut txt = "+".to_string();
+        $( if self.contains($name) { txt.push_char($chr); } )*
+        if txt.len() > 1 { txt } else { String::new() }
+    }
+
     pub fn from_char(c: char) -> Option<$enum_name> {
         match c {
             $(c if c == $chr => Some($name)),*,
@@ -41,6 +47,9 @@ def_modes!(UserMode,
     (UInvisible,            'i', 0x0000000000000001),
     (UOperator,             'o', 0x0000000000000002)
 )
+
+pub static umodes_not_self_activable: &'static str = "o";
+pub static umodes_not_self_deactivable: &'static str = "";
 
 //
 /// Channel Modes

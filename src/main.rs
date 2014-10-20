@@ -1,6 +1,6 @@
 //! metallircd
 
-#![feature(macro_rules,if_let)]
+#![feature(macro_rules,if_let,while_let)]
 
 extern crate time;
 extern crate toml;
