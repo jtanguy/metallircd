@@ -5,6 +5,8 @@
 use std::collections::HashMap;
 use std::collections::hashmap::Keys;
 
+use time::now;
+
 use uuid::Uuid;
 
 use modes::{MembershipMode, ChanMode};
@@ -14,7 +16,8 @@ use modes::{MembershipMode, ChanMode};
 pub struct Channel {
     topic: String,
     members: HashMap<Uuid, MembershipMode>,
-    pub modes: ChanMode
+    pub modes: ChanMode,
+    pub creation_time: i64
 }
 
 #[experimental]
@@ -26,7 +29,8 @@ impl Channel {
         Channel {
             topic: String::new(),
             members: HashMap::new(),
-            modes: ChanMode::empty()
+            modes: ChanMode::empty(),
+            creation_time: now().to_timespec().sec
         }
     }
 

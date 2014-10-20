@@ -60,6 +60,7 @@ pub enum NumericReply {
     RPL_ENDOFEXCEPTLIST = 349,
     RPL_BANLIST         = 367,
     RPL_ENDOFBANLIST    = 368,
+    RPL_CREATIONTIME    = 329,
     // Server related
     RPL_VERSION         = 351,
     RPL_WHOREPLY        = 352,

@@ -62,6 +62,15 @@ impl CommandHandler for CmdMode {
                                 suffix: Some(chan.read().modes.to_modestring())
                             }
                         );
+                        // send creation date as well
+                        user.push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::RPL_CREATIONTIME.to_text(),
+                                args: vec!(user.nickname.clone(), args[0].clone()),
+                                suffix: Some(chan.read().creation_time.to_string())
+                            }
+                        );
                     } else {
                         // Trying to make modifications
                         update_chan_mode(&mut *chan.write(), args, srv);
