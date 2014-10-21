@@ -37,6 +37,15 @@ pub fn handle_user(id: &Uuid, srv: &ServerData) -> RecyclingAction {
                 // nothing, it's normal
             } else {
                 // connection error, zombify
+                srv.channels.read().quit(
+                    &*srv.users.read(), id,
+                    IRCMessage {
+                        prefix: Some(u.get_fullname()),
+                        command: "QUIT".to_string(),
+                        args: vec!(),
+                        suffix: Some("Connection closed.".to_string())
+                    }
+                );
                 pu.zombify()
             }
             // in all cases, stop looping
