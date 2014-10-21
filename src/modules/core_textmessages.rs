@@ -3,6 +3,7 @@
 #![experimental]
 
 use messages::{IRCMessage, TextMessage, Channel, User, Everybody, numericreply};
+use modes;
 use scheduling::ServerData;
 use users::UserData;
 
@@ -119,6 +120,42 @@ impl MessageSendingHandler for ChannelDispatcher {
     fn handle_message_sending(&self, cmd: TextMessage, srv: &ServerData) -> Option<TextMessage> {
         match cmd.target {
             Channel(chan) => {
+                // Check external messages
+                if srv.channels.read().chan_handle(chan.as_slice())
+                    .map(|c| c.read().modes.contains(modes::CNoExternalMsg)).unwrap_or(false) {
+                    // There is some checking to do
+                    if let User(ref id, ref nickname) = cmd.source {
+                    if !srv.channels.read().is_in_chan(id, chan.as_slice()) {
+                        srv.users.read().get_user_by_uuid(id).unwrap().push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
+                                args: vec!(nickname.clone(), chan.clone()),
+                                suffix: Some("Cannot send to channel.".to_string())
+                            }
+                        );
+                        return None;
+                    }}
+                }
+                // check moderated chan
+                if srv.channels.read().chan_handle(chan.as_slice())
+                    .map(|c| c.read().modes.contains(modes::CModerated)).unwrap_or(false) {
+                    // There is some checking to do
+                    if let User(ref id, ref nickname) = cmd.source {
+                    if !srv.channels.read().chan_handle(chan.as_slice())
+                        .map(|c| c.read().is_at_least(id, modes::MVoice)).unwrap_or(false) {
+                        srv.users.read().get_user_by_uuid(id).unwrap().push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
+                                args: vec!(nickname.clone(), chan.clone()),
+                                suffix: Some("Cannot send to channel.".to_string())
+                            }
+                        );
+                        return None;
+                    }}
+                }
+                // sending is valid
                 srv.channels.read().send_to_chan(
                     &*srv.users.read(),
                     chan.as_slice(),

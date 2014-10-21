@@ -124,6 +124,12 @@ impl Channel {
         self.members.find(uuid).map(|m| m.contains(mode)).unwrap_or(false)
     }
 
+    /// Checks if given user has at least given mode
+    #[experimental]
+    pub fn is_at_least(&self, uuid: &Uuid, mode: MembershipMode) -> bool {
+        self.members.find(uuid).map(|m| m.is_at_least(&mode)).unwrap_or(false)
+    }
+
     /// Adds given mode to given user. Returns false if the user was
     /// not in the channel.
     #[experimental]
