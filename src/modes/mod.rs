@@ -69,8 +69,6 @@ def_modes!(MembershipMode,
     (MOp,                   'o', 0x0000000000000004)
 )
 
-pub static mmodes: &'static str = "vo";
-
 impl MembershipMode {
 
     /// Returns `true` if current mode of user is equal or better than `other`.

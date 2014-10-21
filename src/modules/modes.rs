@@ -185,15 +185,15 @@ fn update_chan_mode(user: &UserData,
             _ => continue
         };
         for c in chars {
-            if modes::mmodes.contains_char(c) {
+            if let Some(md) = modes::MembershipMode::from_char(c) {
             if let Some(nick) = words.next() {
                 // It is a membership mode and we have a nick given
                 // If no nick is given we ignore it
                 if let Some(id) = srv.users.read().get_uuid_of_nickname(nick.as_slice()) {
                     let result = if remove {
-                        chan.remove_mode_from(&id, modes::MembershipMode::from_char(c).unwrap())
+                        chan.remove_mode_from(&id, md)
                     } else {
-                        chan.add_mode_to(&id, modes::MembershipMode::from_char(c).unwrap())
+                        chan.add_mode_to(&id, md)
                     };
                     if result {
                         messages.push(
@@ -228,7 +228,20 @@ fn update_chan_mode(user: &UserData,
                         }
                     );
                 }
-            }} else {
+            }} else if let Some(md) = modes::ChanMode::from_char(c) {
+                if remove { chan.modes.remove(md); } else { chan.modes.insert(md); }
+                messages.push(
+                    IRCMessage {
+                        prefix: Some(user.get_fullname()),
+                        command: "MODE".to_string(),
+                        args: vec!(
+                            args[0].clone(),
+                            format!("{}{}", if remove { "-" } else { "+" }.to_string(), c),
+                            ),
+                        suffix: None
+                    }
+                );
+            } else {
                 user.push_message(
                     IRCMessage {
                         prefix: Some(srv.settings.read().name.clone()),
