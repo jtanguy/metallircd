@@ -2,14 +2,20 @@
 name = "metallircd"
 version = "0.0.1"
 dependencies = [
- "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#05c1eb420f54569336b8481c28a46b5a7c51ec99)",
+ "argparse 0.1.0 (git+https://github.com/tailhook/rust-argparse#5ac56e5d460e86044a6e0a257491d3dbfde8ce1f)",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs#8a3ba4c65cfa22a3d924293a1fb3a70bfac5e66c)",
  "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git#c6159089a491ff4398c6d423263a085c95092a04)",
 ]
 
 [[package]]
+name = "argparse"
+version = "0.1.0"
+source = "git+https://github.com/tailhook/rust-argparse#5ac56e5d460e86044a6e0a257491d3dbfde8ce1f"
+
+[[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#05c1eb420f54569336b8481c28a46b5a7c51ec99"
+source = "git+https://github.com/alexcrichton/toml-rs#8a3ba4c65cfa22a3d924293a1fb3a70bfac5e66c"
 
 [[package]]
 name = "uuid"
