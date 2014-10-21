@@ -31,8 +31,11 @@ impl CommandHandler for CmdMode {
                             IRCMessage {
                                 prefix: Some(srv.settings.read().name.clone()),
                                 command: numericreply::RPL_UMODEIS.to_text(),
-                                args: vec!(user.nickname.clone()),
-                                suffix: Some(user.modes.read().to_modestring())
+                                args: vec!(
+                                    user.nickname.clone(),
+                                    user.modes.read().to_modestring()
+                                ),
+                                suffix: None
                             }
                         );
                     } else {
@@ -60,8 +63,12 @@ impl CommandHandler for CmdMode {
                             IRCMessage {
                                 prefix: Some(srv.settings.read().name.clone()),
                                 command: numericreply::RPL_CHANNELMODEIS.to_text(),
-                                args: vec!(user.nickname.clone(), args[0].clone()),
-                                suffix: Some(chan.read().modes.to_modestring())
+                                args: vec!(
+                                    user.nickname.clone(),
+                                    args[0].clone(),
+                                    chan.read().modes.to_modestring()
+                                ),
+                                suffix: None
                             }
                         );
                         // send creation date as well
