@@ -43,6 +43,12 @@ impl CommandHandler for CmdJoin {
                         None
                     );
                     send_names(user, chan, srv);
+                    super::topic::send_topic_to_user(
+                        user,
+                        srv.channels.read().chan_handle(chan).unwrap().read().get_topic(),
+                        chan,
+                        srv
+                    );
                 } else {
                     // invalid chan name
                     user.push_message(

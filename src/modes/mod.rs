@@ -58,7 +58,8 @@ pub static umodes_not_self_deactivable: &'static str = "";
 def_modes!(ChanMode,
     (CSecret,               's', 0x0000000000000001),
     (CNoExternalMsg,        'n', 0x0000000000000002),
-    (CModerated    ,        'm', 0x0000000000000004)
+    (CModerated,            'm', 0x0000000000000004),
+    (CLockTopic,            't', 0x0000000000000008)
 )
 
 //
