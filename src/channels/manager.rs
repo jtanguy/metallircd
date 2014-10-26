@@ -162,4 +162,10 @@ impl ChannelManager {
         }
     }
 
+    /// Apply given closure to all chans.
+    #[experimental]
+    pub fn apply_to_chans(&self, f :|name: &str, handle: &Channel|) {
+        for (n, h) in self.chans.iter() { f(n.as_slice(), &*h.read()); }
+    }
+
 }

@@ -105,6 +105,7 @@ mod core_oper;
 
 mod away;
 mod modes;
+mod list;
 mod topic;
 
 /// Special actions to be performed by the recycler thread (requiring `&mut` access to the UserManager).
@@ -161,6 +162,7 @@ impl ModulesHandler {
                 modes::CmdMode,
                 away::ModAway::init(),
                 topic::CmdTopic,
+                list::CmdList,
                 core_oper::CmdOper::init(conf, logger),
                 core_commands::CmdNick,
                 core_commands::CmdQuit,
