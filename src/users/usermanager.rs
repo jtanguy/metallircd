@@ -3,6 +3,7 @@
 #![experimental]
 
 use std::collections::HashMap;
+use std::sync::{Arc, RWLock, RWLockReadGuard};
 
 use uuid::Uuid;
 
@@ -13,7 +14,7 @@ use util;
 /// The container for all users of the server.
 #[experimental]
 pub struct UserManager {
-    users: HashMap<Uuid, UserData>,
+    users: HashMap<Uuid, Arc<RWLock<UserData>>>,
     nicks: HashMap<String, Uuid>,
 }
 
@@ -41,18 +42,19 @@ impl UserManager {
             if self.nicks.contains_key(&lower_nick) {
                 Err(user)
             } else { // all is ok
-                // TODO auto-detect host
-                let full_user = UserData::new(user.socket,
-                                              user.nickname.unwrap(),
-                                              user.username.unwrap(),
-                                              "metallirc".to_string(),
-                                              user.realname.unwrap());
-
                 let mut id = Uuid::new_v4();
                 // better safe than sorry ?
                 while self.users.contains_key(&id) { id = Uuid::new_v4(); }
 
-                self.users.insert(id.clone(), full_user);
+                // TODO auto-detect host
+                let full_user = UserData::new(user.socket,
+                                              user.nickname.unwrap(),
+                                              id.clone(),
+                                              user.username.unwrap(),
+                                              "metallirc".to_string(),
+                                              user.realname.unwrap());
+
+                self.users.insert(id.clone(), Arc::new(RWLock::new(full_user)));
                 self.nicks.insert(lower_nick, id.clone());
                 Ok(id)
             }
@@ -60,8 +62,13 @@ impl UserManager {
     }
 
     #[experimental]
-    pub fn get_user_by_uuid<'a>(&'a self, id: &Uuid) -> Option<&'a UserData> {
+    pub fn arc_ref<'a>(&'a self, id: &Uuid) -> Option<&'a Arc<RWLock<UserData>>> {
         self.users.find(id)
+    }
+
+    #[experimental]
+    pub fn get_user_by_uuid<'a>(&'a self, id: &Uuid) -> Option<RWLockReadGuard<UserData>> {
+        self.users.find(id).map(|u| u.read())
     }
 
     #[experimental]
@@ -70,10 +77,10 @@ impl UserManager {
     }
 
     #[experimental]
-    pub fn get_user_by_nickname<'a>(&'a self, nick: &str) -> Option<&'a UserData> {
+    pub fn get_user_by_nickname<'a>(&'a self, nick: &str) -> Option<RWLockReadGuard<UserData>> {
         // we should *never* have a nick for a unexistent user
         // so .unwrap() should *never* fail
-        self.nicks.find(&util::label_to_lower(nick)).map(|id| self.users.find(id).unwrap())
+        self.nicks.find(&util::label_to_lower(nick)).map(|id| self.users.find(id).unwrap().read())
     }
 
     /// Changes the nickname of given uuid.
@@ -84,7 +91,7 @@ impl UserManager {
         let lower_new_nick = util::label_to_lower(new_nick.as_slice());
         if self.nicks.contains_key(&lower_new_nick) { return false }
 
-        let user = self.users.get_mut(id);
+        let mut user = self.users[*id].write();
         let old_nick = ::std::mem::replace(&mut user.nickname, new_nick.clone());
         let _ = self.nicks.remove(&util::label_to_lower(old_nick.as_slice()));
         self.nicks.insert(lower_new_nick, id.clone());
@@ -99,15 +106,15 @@ impl UserManager {
     #[experimental]
     pub fn del_user(&mut self, id: &Uuid) {
         match self.users.pop(id) {
-            Some(user_data) => { self.nicks.pop(&user_data.nickname); }
+            Some(user_data) => { self.nicks.pop(&user_data.read().nickname); }
             None => {}
         }
     }
 
     #[experimental]
-    pub fn iterate_map(&self, func: |u: &UserData|) {
+    pub fn apply_to_all(&self, func: |u: &UserData|) {
         for u in self.users.values() {
-            func(u);
+            func(&*u.read());
         }
     }
 

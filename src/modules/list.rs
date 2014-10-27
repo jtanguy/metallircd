@@ -57,7 +57,7 @@ fn send_chan_in_list(user: &UserData, chan: &str, chandle: &Channel, srv: &Serve
                 chan.to_string(),
                 chandle.member_count().to_string(),
             ),
-            suffix: Some(chandle.get_topic().to_string())
+            suffix: Some(chandle.topic.clone())
         }
     );
 }

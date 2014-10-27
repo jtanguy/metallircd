@@ -15,7 +15,7 @@ use uuid::Uuid;
 pub fn handle_user(id: &Uuid, srv: &ServerData) -> RecyclingAction {
     // first, send its messages to the user
     let manager = srv.users.read();
-    let u = manager.get_user_by_uuid(id).unwrap();
+    let u = &*manager.get_user_by_uuid(id).unwrap();
     let mut pu = u.private_handler();
     while match pu.next_queued_message() {
         Some(msg) => match pu.socket_write_message(msg) {
@@ -37,8 +37,7 @@ pub fn handle_user(id: &Uuid, srv: &ServerData) -> RecyclingAction {
                 // nothing, it's normal
             } else {
                 // connection error, zombify
-                srv.channels.read().quit(
-                    &*srv.users.read(), id,
+                u.send_to_known(
                     IRCMessage {
                         prefix: Some(u.get_fullname()),
                         command: "QUIT".to_string(),
@@ -87,15 +86,12 @@ pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
                 (manager.change_nick(id, &new_nick), old_name, old_nick)
             };
             if success {
-                let message = IRCMessage {
+                srv.users.read().get_user_by_uuid(id).unwrap().send_to_known(IRCMessage {
                     prefix: Some(old_name),
                     command: "NICK".to_string(),
                     args: vec!(new_nick),
                     suffix: None,
-                };
-                for u in srv.channels.read().known_by_uuid(id).iter() {
-                    srv.users.read().get_user_by_uuid(u).unwrap().push_message(message.clone());
-                }
+                });
             } else {
                 srv.users.read().get_user_by_uuid(id).unwrap().push_message(
                     IRCMessage {

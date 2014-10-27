@@ -135,9 +135,18 @@ pub fn spawn_clients_recycler(srv: Arc<ServerData>, recycled_worker: deque::Work
                             destroy_user(&id, &*srv);
                         } else {
                             // this user is disconnected, free it
-                            let is_zombie = srv.users.read().get_user_by_uuid(&id).map_or(true, |u| u.is_zombie());
+                            let is_zombie = srv.users.read()
+                                    .get_user_by_uuid(&id).map_or(true, |u| u.is_zombie());
                             if is_zombie {
+                                // making some cleanup of his chan as well
+                                let chans = srv.users.read().get_user_by_uuid(&id).map_or(Vec::new(),
+                                    |u| u.channels.read().keys().map(|s| s.clone()).collect());
                                 destroy_user(&id, &*srv);
+                                for chan in chans.into_iter() {
+                                    let empty = srv.channels.read().chan_handle(chan.as_slice())
+                                                            .unwrap().write().cleanup();
+                                    if empty { srv.channels.write().destroy_if_empty(chan.as_slice()); }
+                                }
                             } else if action == modules::Nothing {
                                 recycled_worker.push(id);
                             } else {

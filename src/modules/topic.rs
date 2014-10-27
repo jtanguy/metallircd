@@ -13,7 +13,7 @@ pub struct CmdTopic;
 module!(CmdTopic is CommandHandler)
 
 impl CommandHandler for CmdTopic {
-    fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+    fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "TOPIC" { return (false, Nothing); }
 
@@ -37,11 +37,26 @@ impl CommandHandler for CmdTopic {
 
             if args.len() == 1 {
                 // we are only reading the topic
-                send_topic_to_user(user, chan_handle.read().get_topic(),
+                send_topic_to_user(user, chan_handle.read().topic.as_slice(),
                                    args[0].as_slice(), srv);
             } else {
                 // it's an attempt to modify it.
-                let can_modify = if !chan_handle.read().has_member(user_uuid) {
+                let can_modify = if let Some(m) = user.membership(args[0].as_slice()) {
+                    if !m.channel.upgrade().unwrap().read().modes.contains(modes::CLockTopic)
+                    || m.modes.read().is_at_least(&modes::MOp) {
+                        true
+                    } else {
+                        user.push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
+                                args: vec!(user.nickname.clone(), args[0].clone()),
+                                suffix: Some("You're not channel operator&.".to_string())
+                            }
+                        );
+                        false
+                    }
+                } else {
                     user.push_message(
                         IRCMessage {
                             prefix: Some(srv.settings.read().name.clone()),
@@ -51,23 +66,12 @@ impl CommandHandler for CmdTopic {
                         }
                     );
                     false
-                } else if chan_handle.read().modes.contains(modes::CLockTopic)
-                    && !chan_handle.read().is_at_least(user_uuid, modes::MOp) {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
-                            args: vec!(user.nickname.clone(), args[0].clone()),
-                            suffix: Some("You're not channel operator&.".to_string())
-                        }
-                    );
-                    false
-                } else { true };
+                };
+
 
                 if can_modify {
-                    chan_handle.write().set_topic(args[1].clone());
+                    chan_handle.write().topic = args[1].clone();
                     channels_handle.send_to_chan(
-                        &*srv.users.read(),
                         args[0].as_slice(),
                         IRCMessage {
                             prefix: Some(user.get_fullname()),

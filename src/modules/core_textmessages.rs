@@ -84,7 +84,7 @@ impl MessageSendingHandler for QueryDispatcher {
     fn handle_message_sending(&self, cmd: TextMessage, srv: &ServerData) -> Option<TextMessage> {
         match cmd.target {
             Everybody => {
-                srv.users.read().iterate_map(|u| {
+                srv.users.read().apply_to_all(|u| {
                     u.push_message(
                         IRCMessage {
                             prefix: Some(cmd.source.clone().into_text()),
@@ -121,43 +121,45 @@ impl MessageSendingHandler for ChannelDispatcher {
         match cmd.target {
             Channel(chan) => {
                 // Check external messages
-                if srv.channels.read().chan_handle(chan.as_slice())
-                    .map(|c| c.read().modes.contains(modes::CNoExternalMsg)).unwrap_or(false) {
-                    // There is some checking to do
-                    if let User(ref id, ref nickname) = cmd.source {
-                    if !srv.channels.read().is_in_chan(id, chan.as_slice()) {
-                        srv.users.read().get_user_by_uuid(id).unwrap().push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
-                                args: vec!(nickname.clone(), chan.clone()),
-                                suffix: Some("Cannot send to channel.".to_string())
-                            }
-                        );
-                        return None;
-                    }}
-                }
-                // check moderated chan
-                if srv.channels.read().chan_handle(chan.as_slice())
-                    .map(|c| c.read().modes.contains(modes::CModerated)).unwrap_or(false) {
-                    // There is some checking to do
-                    if let User(ref id, ref nickname) = cmd.source {
-                    if !srv.channels.read().chan_handle(chan.as_slice())
-                        .map(|c| c.read().is_at_least(id, modes::MVoice)).unwrap_or(false) {
-                        srv.users.read().get_user_by_uuid(id).unwrap().push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
-                                args: vec!(nickname.clone(), chan.clone()),
-                                suffix: Some("Cannot send to channel.".to_string())
-                            }
-                        );
-                        return None;
-                    }}
+                if let User(ref id, ref nickname) = cmd.source {
+                    let umanager_handle = srv.users.read();
+                    let user = umanager_handle.get_user_by_uuid(id).unwrap();
+                    // check external messages
+                    if srv.channels.read().chan_handle(chan.as_slice())
+                        .map(|c| c.read().modes.contains(modes::CNoExternalMsg)).unwrap_or(false) {
+                        // There is some checking to do
+                        if user.membership(chan.as_slice()).is_none() {
+                            user.push_message(
+                                IRCMessage {
+                                    prefix: Some(srv.settings.read().name.clone()),
+                                    command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
+                                    args: vec!(nickname.clone(), chan.clone()),
+                                    suffix: Some("Cannot send to channel.".to_string())
+                                }
+                            );
+                            return None;
+                        }
+                    }
+                    // check moderated chan
+                    if srv.channels.read().chan_handle(chan.as_slice())
+                        .map(|c| c.read().modes.contains(modes::CModerated)).unwrap_or(false) {
+                        // There is some checking to do
+                        if !user.membership(chan.as_slice())
+                            .map(|m| m.modes.read().is_at_least(&modes::MVoice)).unwrap_or(false) {
+                            user.push_message(
+                                IRCMessage {
+                                    prefix: Some(srv.settings.read().name.clone()),
+                                    command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
+                                    args: vec!(nickname.clone(), chan.clone()),
+                                    suffix: Some("Cannot send to channel.".to_string())
+                                }
+                            );
+                            return None;
+                        }
+                    }
                 }
                 // sending is valid
                 srv.channels.read().send_to_chan(
-                    &*srv.users.read(),
                     chan.as_slice(),
                     IRCMessage {
                         prefix: Some(cmd.source.clone().into_text()),

@@ -47,13 +47,11 @@ pub struct CmdQuit;
 module!(CmdQuit is CommandHandler)
 
 impl CommandHandler for CmdQuit {
-    fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+    fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, _: &ServerData)
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "QUIT" { return (false, Nothing); }
 
-        let emptied = srv.channels.read().quit(
-            &*srv.users.read(),
-            user_uuid,
+        user.send_to_known(
             IRCMessage {
                 prefix: Some(user.get_fullname()),
                 command: "QUIT".to_string(),
@@ -61,12 +59,6 @@ impl CommandHandler for CmdQuit {
                 suffix: cmd.suffix.clone()
             }
         );
-        if emptied.len() > 0 {
-            let mut handle = srv.channels.write();
-            for chan in emptied.iter() {
-                handle.destroy_if_empty(chan.as_slice());
-            }
-        }
         (true, Zombify)
     }
 }

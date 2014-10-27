@@ -55,8 +55,7 @@ impl CommandHandler for CmdMode {
                 }
             } else if let Some(chan) = srv.channels.read().chan_handle(args[0].as_slice()) {
                 // avoid deadlock
-                let has_member = chan.read().has_member(user_uuid);
-                if has_member {
+                if let Some(membership) = user.membership(args[0].as_slice()) {
                     if args.len() == 1 {
                         // only checking modes
                         user.push_message(
@@ -83,11 +82,11 @@ impl CommandHandler for CmdMode {
                     } else {
                         // Trying to make modifications
                         // avoid deadlock
-                        let is_oper = chan.read().has_mode(user_uuid, modes::MOp);
+                        let is_oper = membership.modes.read().is_at_least(&modes::MOp);
                         if is_oper || user.modes.read().contains(modes::UOperator) {
                             let messages = update_chan_mode(user, &mut *chan.write(), &args, srv);
                             for m in messages.into_iter() {
-                                srv.channels.read().send_to_chan(&*srv.users.read(), args[0].as_slice(), m, None);
+                                srv.channels.read().send_to_chan(args[0].as_slice(), m, None);
                             }
                         } else {
                             user.push_message(
@@ -196,13 +195,13 @@ fn update_chan_mode(user: &UserData,
             if let Some(nick) = words.next() {
                 // It is a membership mode and we have a nick given
                 // If no nick is given we ignore it
-                if let Some(id) = srv.users.read().get_uuid_of_nickname(nick.as_slice()) {
-                    let result = if remove {
-                        chan.remove_mode_from(&id, md)
-                    } else {
-                        chan.add_mode_to(&id, md)
-                    };
-                    if result {
+                if let Some(other) = srv.users.read().get_user_by_nickname(nick.as_slice()) {
+                    if let Some(membership) = other.membership(args[0].as_slice()) {
+                        if remove {
+                            membership.modes.write().remove(md);
+                        } else {
+                            membership.modes.write().insert(md)
+                        };
                         messages.push(
                             IRCMessage {
                                 prefix: Some(user.get_fullname()),

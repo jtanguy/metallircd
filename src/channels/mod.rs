@@ -4,6 +4,7 @@
 
 #![experimental]
 
+pub use self::chan::Membership;
 pub use self::chan::Channel;
 pub use self::manager::ChannelManager;
 

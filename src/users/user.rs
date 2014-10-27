@@ -2,15 +2,18 @@
 
 #![experimental]
 
+use std::collections::{HashMap, HashSet};
 use std::io::{BufferedStream, IoResult, IoError};
 use std::io::net::tcp::TcpStream;
-use std::sync::{Mutex, MutexGuard, RWLock};
+use std::sync::{Arc, Mutex, MutexGuard, RWLock};
 use std::sync::mpsc_queue::Queue as MPSCQueue;
 
+use channels::Membership;
 use messages::IRCMessage;
 use modes::UserMode;
-
 use util;
+
+use uuid::Uuid;
 
 /// Data describing a user.
 #[experimental]
@@ -19,11 +22,13 @@ pub struct UserData {
     socket: Mutex<BufferedStream<TcpStream>>,
     /// The queue of this user.
     queue: MPSCQueue<IRCMessage>,
+    pub id: Uuid,
     pub nickname: String,
     pub username: String,
     pub hostname: String,
     pub realname: String,
     pub modes: RWLock<UserMode>,
+    pub channels: RWLock<HashMap<String, Arc<Membership>>>,
     /// is this user disconnected ?
     zombie: RWLock<bool>
 }
@@ -75,26 +80,48 @@ impl UserData {
 
     #[experimental]
     /// Creates a new user
-    pub fn new(tcpsocket: BufferedStream<TcpStream>, nick: String, username: String, hostname: String, realname: String) -> UserData {
+    pub fn new(tcpsocket: BufferedStream<TcpStream>, nick: String, id: Uuid,
+               username: String, hostname: String, realname: String) -> UserData {
         UserData {
             socket: Mutex::new(tcpsocket),
             queue: MPSCQueue::new(),
+            id: id,
             nickname: nick,
             username: username,
             hostname: hostname,
             realname: realname,
+            channels: RWLock::new(HashMap::new()),
             modes: RWLock::new(UserMode::empty()),
             zombie: RWLock::new(false)
         }
     }
 
     /// Pushes a message to this user's personnal queue.
+    #[experimental]
     pub fn push_message(&self, msg: IRCMessage) {
         self.queue.push(msg);
     }
 
+    /// Sends given message to all known users
+    pub fn send_to_known(&self, msg: IRCMessage) {
+        let mut done: HashSet<Uuid> = HashSet::new();
+        for c in self.channels.read().values() {
+            if let Some(chan) = c.channel.upgrade() {
+                chan.read().apply_to_members(|u, m| {
+                    if !done.contains(u) {
+                        done.insert(u.clone());
+                        if let Some(other) = m.user.upgrade() {
+                            other.read().push_message(msg.clone());
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     /// Retrieves the private handler to this user. Only on can exist at a given time.
     /// If an other one exists, will block util it is released.
+    #[experimental]
     pub fn private_handler<'a>(&'a self) -> PrivateUserDataHandler<'a> {
         PrivateUserDataHandler {
             data: self,
@@ -103,6 +130,7 @@ impl UserData {
     }
 
     /// Returns the full_name of this user
+    #[experimental]
     pub fn get_fullname(&self) -> String {
         let mut result = self.nickname.to_string();
         result.push_str("!");
@@ -113,7 +141,15 @@ impl UserData {
     }
 
     /// Is this user zombified ?
+    #[experimental]
     pub fn is_zombie(&self) -> bool {
         *self.zombie.read()
+    }
+
+    /// Is this user in given chan ?
+    #[experimental]
+    pub fn membership<'a>(&'a self, chan: &str) -> Option<Arc<Membership>> {
+        let lowerchan = util::label_to_lower(chan);
+        self.channels.read().find(&lowerchan).map(|a| a.clone())
     }
 }
