@@ -51,7 +51,7 @@ impl CommandHandler for ModAway {
                         prefix: Some(srv.settings.read().name.clone()),
                         command: numericreply::RPL_UNAWAY.to_text(),
                         args: vec!(user.nickname.clone()),
-                        suffix: Some("You are no longer marked as away.".to_string())
+                        suffix: Some("You are no longer marked as being away.".to_string())
                     }
                 );
             }
