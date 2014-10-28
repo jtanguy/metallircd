@@ -2,16 +2,14 @@
 
 #![feature(macro_rules,if_let,while_let)]
 
-extern crate argparse;
+extern crate getopts;
 extern crate time;
 extern crate toml;
 extern crate uuid;
 
 use std::io::Listener;
 use std::io::net::tcp::TcpListener;
-use std::os::set_exit_status;
-
-use argparse::{ArgumentParser, Store};
+use std::os;
 
 pub mod channels;
 pub mod conf;
@@ -28,38 +26,56 @@ fn main() {
     // CONFIG
     //
 
-    let mut cfg_path = "./metallirc.toml".to_string();
+    // handle options
+    let args: Vec<String> = os::args();
+    let program = args[0].clone();
 
-    let mut ap = ArgumentParser::new();
-    ap.set_description("metallircd");
-    ap.refer(&mut cfg_path).add_option(["--cfg"], box Store::<String>, "config file");
-    match ap.parse_args() {
-        Ok(()) => {}
-        Err(x) => { set_exit_status(x); return; }
+    let opts = [
+        getopts::optopt("c", "config", "set location of config file", "FILE"),
+        getopts::optflag("h", "help", "display this help message")
+    ];
+
+    let matches = match getopts::getopts(args.tail(), opts) {
+        Ok(m) => { m }
+        Err(f) => { fail!(f.to_string()) }
+    };
+
+    if matches.opt_present("h") {
+        let brief = getopts::short_usage(program.as_slice(), opts.as_slice());
+        println!("{}", getopts::usage(brief.as_slice(), opts.as_slice()))
+        return;
     }
 
+    let cfg_path = match matches.opt_str("c") {
+        Some(s) => s,
+        None => "./metallirc.toml".to_string()
+    };
+
+    // load config file
     let configfile = match from_str::<Path>(cfg_path.as_slice()) {
         Some(path) => path,
-        None => { println!("Invalid path for config file."); set_exit_status(1); return }
+        None => { println!("Invalid path for config file."); os::set_exit_status(1); return }
     };
     let serverconfig = match conf::load_config(configfile) {
         Ok(c) => c,
-        Err(e) => { println!("{}", e); set_exit_status(1); return }
+        Err(e) => { println!("{}", e); os::set_exit_status(1); return }
     };
 
     // new clients handler
     let listener = match TcpListener::bind(serverconfig.address.as_slice(), serverconfig.port) {
         Ok(l) => l,
-        Err(e) => { println!("Could not bind port: {}", e); set_exit_status(1); return }
+        Err(e) => { println!("Could not bind port: {}", e); os::set_exit_status(1); return }
     };
     let acceptor = match listener.listen() {
         Ok(a) => a,
-        Err(e) => { println!("Could not bind port: {}", e); set_exit_status(1); return }
+        Err(e) => { println!("Could not bind port: {}", e); os::set_exit_status(1); return }
     };
 
     //
     // RUNNING
     //
+
+    println!("Server initialised and running.")
 
     let srv_data = scheduling::ServerData::new(serverconfig);
 

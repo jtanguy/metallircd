@@ -10,5 +10,3 @@ git = "https://github.com/rust-lang/uuid.git"
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"
 
-[dependencies.argparse]
-git = "https://github.com/tailhook/rust-argparse"

@@ -24,7 +24,7 @@ impl $enum_name {
 
     pub fn to_modestring(&self) -> String {
         let mut txt = "+".to_string();
-        $( if self.contains($name) { txt.push_char($chr); } )*
+        $( if self.contains($name) { txt.push($chr); } )*
         if txt.len() > 1 { txt } else { String::new() }
     }
 
