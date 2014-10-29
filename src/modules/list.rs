@@ -20,14 +20,19 @@ impl CommandHandler for CmdList {
         if let Some(args) = cmd.as_nparams(0,2) { // always true !
             if args.len() > 0 {
                 for chan in args[0].as_slice().split_terminator(',') {
-                    if let Some(handle) = srv.channels.read().chan_handle(chan) {
-                        send_chan_in_list(user, chan, &*handle.read(), srv);
+                    if chan.contains_char('?') || chan.contains_char('*') {
+                        // its a mask
+                        srv.channels.read().apply_to_chans_matching(chan, |handle| {
+                            send_chan_in_list(user, handle, srv);
+                        });
+                    } else if let Some(handle) = srv.channels.read().chan_handle(chan) {
+                        send_chan_in_list(user, &*handle.read(), srv);
                     }
                 }
             } else {
                 // we just want all channels
-                srv.channels.read().apply_to_chans(|name, handle| {
-                    send_chan_in_list(user, name, handle, srv);
+                srv.channels.read().apply_to_chans(|handle| {
+                    send_chan_in_list(user, handle, srv);
                 });
             }
             user.push_message(
@@ -47,14 +52,14 @@ impl CommandHandler for CmdList {
 }
 
 #[inline(always)]
-fn send_chan_in_list(user: &UserData, chan: &str, chandle: &Channel, srv: &ServerData) {
+fn send_chan_in_list(user: &UserData, chandle: &Channel, srv: &ServerData) {
     user.push_message(
         IRCMessage {
             prefix: Some(srv.settings.read().name.clone()),
             command: numericreply::RPL_LIST.to_text(),
             args: vec!(
                 user.nickname.clone(),
-                chan.to_string(),
+                chandle.name.to_string(),
                 chandle.member_count().to_string(),
             ),
             suffix: Some(chandle.topic.clone())

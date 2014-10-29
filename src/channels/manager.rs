@@ -127,8 +127,16 @@ impl ChannelManager {
 
     /// Apply given closure to all chans.
     #[experimental]
-    pub fn apply_to_chans(&self, f :|name: &str, handle: &Channel|) {
-        for (n, h) in self.chans.iter() { f(n.as_slice(), &*h.read()); }
+    pub fn apply_to_chans(&self, f :|handle: &Channel|) {
+        for h in self.chans.values() { f(&*h.read()); }
+    }
+
+    /// Apply given closure to all chans which name matches given mask.
+    #[experimental]
+    pub fn apply_to_chans_matching(&self, mask: &str, f :|handle: &Channel|) {
+        for (n, h) in self.chans.iter() {
+            if util::matches_mask(n.as_slice(), mask) { f(&*h.read());}
+        }
     }
 
 }
