@@ -49,3 +49,55 @@ pub fn label_to_lower(nick: &str) -> String {
         }
     }).collect()
 }
+
+/// Returns whether given mask matches given label.
+#[experimental]
+pub fn matches_mask(mut label: &str, mut mask: &str) -> bool {
+    while !label.is_empty() {
+        match mask.slice_shift_char() {
+            (Some('?'), mask_tail) => {
+                let (_, label_tail) = label.slice_shift_char();
+                // advance and continue
+                mask = mask_tail;
+                label = label_tail;
+            },
+            (Some('*'), mask_tail) => {
+                let (_, label_tail) = label.slice_shift_char();
+                return matches_mask(label, mask_tail) || matches_mask(label_tail, mask);
+            },
+            (Some(c), mask_tail) => {
+                let (d, label_tail) = label.slice_shift_char();
+                // d can not be None
+                if c.to_lowercase() != d.unwrap().to_lowercase() { return false; }
+                // advance and continue
+                mask = mask_tail;
+                label = label_tail;
+            },
+            (None, _) => { return false; }
+        }
+    }
+    // "" can only be matched by "*" or ""
+    mask.is_empty() || mask == "*"
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::matches_mask;
+
+    #[test]
+    fn test_matches_mask() {
+        assert!(matches_mask("foo", "foo"));
+        assert!(matches_mask("foo", "fo?"));
+        assert!(matches_mask("foo", "f?o"));
+        assert!(matches_mask("foo", "?oo"));
+        assert!(matches_mask("foo", "f*"));
+        assert!(matches_mask("foo", "*"));
+        assert!(!matches_mask("foo", "foo?"));
+        assert!(!matches_mask("foo", "bar"));
+        assert!(!matches_mask("foo", "f?oo"));
+        assert!(!matches_mask("foo", "oo"));
+        assert!(!matches_mask("foo", "fo"));
+    }
+
+}

@@ -83,6 +83,34 @@ impl UserManager {
         self.nicks.find(&util::label_to_lower(nick)).map(|id| self.users.find(id).unwrap().read())
     }
 
+    /// Fetches all uuid whose nickname matches mask
+    #[experimental]
+    pub fn uuids_matching_mask_nick(&self, mask: &str) -> Vec<Uuid> {
+        self.nicks.iter().fold(Vec::new(), |v, (n, id)|
+            if util::matches_mask(n.as_slice(), mask) { v + Some(id.clone()) } else { v }
+        )
+    }
+
+    /// Fetches all uuid whose host matches mask
+    #[experimental]
+    pub fn uuids_matching_mask_host(&self, mask: &str) -> Vec<Uuid> {
+        self.users.iter().fold(Vec::new(), |v, (id, u)|
+            if util::matches_mask(u.read().hostname.as_slice(), mask){
+                v + Some(id.clone())
+            } else { v }
+        )
+    }
+
+    /// Fetches all uuid whose fullname (*!*@*) matches mask
+    #[experimental]
+    pub fn uuids_matching_mask_fullname(&self, mask: &str) -> Vec<Uuid> {
+        self.users.iter().fold(Vec::new(), |v, (id, u)|
+            if util::matches_mask(u.read().get_fullname().as_slice(), mask){
+                v + Some(id.clone())
+            } else { v }
+        )
+    }
+
     /// Changes the nickname of given uuid.
     /// Fails if the uuid does not exists.
     /// Returns false and does nothing if the new nick was already in use.
