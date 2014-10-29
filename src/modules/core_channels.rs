@@ -75,7 +75,7 @@ pub struct CmdPart;
 module!(CmdPart is CommandHandler)
 
 impl CommandHandler for CmdPart {
-    fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+    fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "PART" { return (false, Nothing); }
 
@@ -84,17 +84,15 @@ impl CommandHandler for CmdPart {
             for chan in args[0].as_slice().split_terminator(',') {
                 match user.channels.write().entry(chan.to_string()) {
                     Occupied(e) => {
-                        e.take().channel.upgrade().unwrap().read().apply_to_members(|u, m| {
-                            if u != user_uuid {
-                                m.user.upgrade().unwrap().read().push_message(
-                                    IRCMessage {
-                                        prefix: Some(user.get_fullname()),
-                                        command: "PART".to_string(),
-                                        args: cmd.args.clone(),
-                                        suffix: Some(partmsg.to_string())
-                                    }
-                                );
-                            }
+                        e.take().channel.upgrade().unwrap().read().apply_to_members(|_, m| {
+                            m.user.upgrade().unwrap().read().push_message(
+                                IRCMessage {
+                                    prefix: Some(user.get_fullname()),
+                                    command: "PART".to_string(),
+                                    args: cmd.args.clone(),
+                                    suffix: Some(partmsg.to_string())
+                                }
+                            );
                         });
                     },
                     Vacant(_) => {
