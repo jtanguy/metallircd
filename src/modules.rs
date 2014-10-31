@@ -22,7 +22,7 @@
 use conf::ServerConf;
 use logging::{Logger, Debug};
 use messages::{IRCMessage, TextMessage, numericreply};
-use scheduling::ServerData;
+use ServerData;
 use users::UserData;
 
 use uuid::Uuid;
@@ -40,15 +40,16 @@ use std::mem::{size_of, transmute};
 use std::raw::TraitObject;
 
 #[doc(hidden)]
-trait Module: 'static {
+pub trait Module: 'static {
     // HACK(eddyb) Missing upcast to Any to make this clean.
     fn get_type_id(&self) -> TypeId { TypeId::of::<&'static Self>() }
     fn get_vtable_for_trait(&self, _trait_id: TypeId) -> Option<&'static ()> { None }
 }
 
+#[macro_escape]
 macro_rules! module {
     ($ty:ty is $($Trait:ty),+) => (
-        impl super::Module for $ty {
+        impl ::metallirc::modules::Module for $ty {
             fn get_vtable_for_trait(&self, trait_id: ::std::intrinsics::TypeId) -> Option<&'static ()> {
                 $(if trait_id == ::std::intrinsics::TypeId::of::<&'static $Trait>() {
                     Some(unsafe {&*::std::mem::transmute::<&$Trait, ::std::raw::TraitObject>(self).vtable})
@@ -61,7 +62,7 @@ macro_rules! module {
 }
 
 #[doc(hidden)]
-trait ModuleRef<'a> {
+pub trait ModuleRef<'a> {
     fn as_ref<Sized? T>(self) -> Option<&'a T>;
 }
 
@@ -99,7 +100,7 @@ macro_rules! init_modules {
 
 // declare your submodules here
 
-mod core_textmessages;
+/*mod core_textmessages;
 mod core_commands;
 mod core_channels;
 mod core_oper;
@@ -107,7 +108,7 @@ mod core_oper;
 mod away;
 mod modes;
 mod list;
-mod topic;
+mod topic;*/
 
 /// Special actions to be performed by the recycler thread (requiring `&mut` access to the UserManager).
 #[experimental]
@@ -154,7 +155,7 @@ impl ModulesHandler {
     pub fn init(conf: &ServerConf, logger: &Logger) -> ModulesHandler {
         // Put the modules here for them to be loaded
         ModulesHandler {
-            modules: init_modules!(
+            modules: Vec::new() /*init_modules!(
                 core_commands::CmdPing,
                 core_textmessages::CmdPrivmsgOrNotice,
                 core_channels::CmdJoin,
@@ -170,7 +171,7 @@ impl ModulesHandler {
                 core_textmessages::QueryDispatcher,
                 core_textmessages::ChannelDispatcher,
                 core_oper::CmdDie
-            )
+            )*/
         }
     }
 

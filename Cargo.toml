@@ -4,6 +4,15 @@ name = "metallircd"
 version = "0.0.1"
 authors = ["Victor Berger <victor.berger@m4x.org>"]
 
+[lib]
+name = "metallirc"
+test = true
+
+[[bin]]
+name = "metallircd"
+path = "src/bin/metallircd.rs"
+doc = false
+
 [dependencies.uuid]
 git = "https://github.com/rust-lang/uuid.git"
 

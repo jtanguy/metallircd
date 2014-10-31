@@ -1,12 +1,12 @@
-use super::ServerData;
+use metallirc::ServerData;
 
-use modules::{RecyclingAction, Nothing, Zombify, ChangeNick};
+use metallirc::modules::{RecyclingAction, Nothing, Zombify, ChangeNick};
 
-use logging::Debug;
+use metallirc::logging::Debug;
 
 use std::io;
 
-use messages::{IRCMessage, numericreply};
+use metallirc::messages::{IRCMessage, numericreply};
 
 use uuid::Uuid;
 

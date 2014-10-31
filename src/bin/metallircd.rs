@@ -7,19 +7,15 @@ extern crate time;
 extern crate toml;
 extern crate uuid;
 
+extern crate metallirc;
+
 use std::io::Listener;
 use std::io::net::tcp::TcpListener;
 use std::os;
 
-pub mod channels;
-pub mod conf;
-pub mod logging;
-pub mod messages;
-pub mod modes;
-pub mod modules;
-pub mod scheduling;
-pub mod users;
-pub mod util;
+use metallirc::{conf, ServerData};
+
+mod scheduling;
 
 fn main() {
     //
@@ -77,7 +73,7 @@ fn main() {
 
     println!("Server initialised and running.")
 
-    let srv_data = scheduling::ServerData::new(serverconfig);
+    let srv_data = ServerData::new(serverconfig);
 
     scheduling::run_server(srv_data, acceptor);
 

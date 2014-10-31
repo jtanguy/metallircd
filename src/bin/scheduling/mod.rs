@@ -15,50 +15,16 @@
 
 #![experimental]
 
-use channels::ChannelManager;
-use logging::{Logger, Info};
-use conf::ServerConf;
-use users::UserManager;
-use modules::ModulesHandler;
+use metallirc::logging::Info;
+use metallirc::ServerData;
 
 use std::io::net::tcp::TcpAcceptor;
-use std::sync::{Arc, deque, RWLock};
+use std::sync::{Arc, deque};
 
 use uuid::Uuid;
 
 mod users_handling;
 mod procs;
-
-/// Contains all data of the server in a way that is safe to be shared between the server threads.
-#[experimental]
-pub struct ServerData {
-    pub settings: RWLock<ServerConf>,
-    pub users: RWLock<UserManager>,
-    pub channels: RWLock<ChannelManager>,
-
-    pub logger: Logger,
-    pub signal_shutdown: RWLock<bool>,
-
-    pub modules_handler: RWLock<ModulesHandler>
-}
-
-#[experimental]
-impl ServerData {
-
-    /// Creates the server data structure from a config.
-    pub fn new(settings: ServerConf)-> ServerData {
-        let logger = Logger::new(settings.loglevel);
-        let modules_hdlr = ModulesHandler::init(&settings, &logger);
-        ServerData {
-            settings: RWLock::new(settings),
-            users: RWLock::new(UserManager::new()),
-            channels: RWLock::new(ChannelManager::new()),
-            logger: logger,
-            signal_shutdown: RWLock::new(false),
-            modules_handler: RWLock::new(modules_hdlr)
-        }
-    }
-}
 
 /// Runs the server on given server data.
 pub fn run_server(srv: ServerData, acceptor: TcpAcceptor) {

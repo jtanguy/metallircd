@@ -13,16 +13,16 @@ use std::sync::deque::{Stealer, Worker};
 use std::task::TaskBuilder;
 use std::time::duration::Duration;
 
-use messages::{numericreply, IRCMessage};
-use modules;
-use modules::RecyclingAction;
+use metallirc::messages::{numericreply, IRCMessage};
+use metallirc::modules;
+use metallirc::modules::RecyclingAction;
 
 use uuid::Uuid;
 
-use logging::Debug;
-use users;
+use metallirc::logging::Debug;
+use metallirc::users;
+use metallirc::ServerData;
 
-use super::ServerData;
 use super::users_handling::{handle_user, destroy_user, recycle_user, disconnect_user};
 
 /// Spawns the new client thread handler on given acceptor.
