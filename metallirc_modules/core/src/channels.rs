@@ -4,15 +4,15 @@
 
 use std::collections::hashmap::{Vacant, Occupied};
 
-use messages::{IRCMessage, numericreply};
-use scheduling::ServerData;
-use users::UserData;
-use util;
+use metallirc::messages::{IRCMessage, numericreply};
+use metallirc::ServerData;
+use metallirc::users::UserData;
+use metallirc::util;
 
 use uuid::Uuid;
 
-use super::{RecyclingAction, Nothing};
-use super::{CommandHandler, send_needmoreparams};
+use metallirc::modules::{RecyclingAction, Nothing};
+use metallirc::modules::{CommandHandler, send_needmoreparams};
 
 pub struct CmdJoin;
 

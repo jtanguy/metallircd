@@ -1,0 +1,16 @@
+[package]
+
+name = "mod_away"
+version = "0.0.1"
+authors = ["Victor Berger <victor.berger@m4x.org>"]
+
+[lib]
+name = "mod_away"
+crate_type = ["dylib"]
+test = true
+
+[dependencies.uuid]
+git = "https://github.com/rust-lang/uuid.git"
+
+[dependencies.libmetallirc]
+path = "../../libmetallirc"

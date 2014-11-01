@@ -2,15 +2,15 @@
 
 #![experimental]
 
-use messages::{IRCMessage, TextMessage, Channel, User, Everybody, numericreply};
-use modes;
-use scheduling::ServerData;
-use users::UserData;
+use metallirc::messages::{IRCMessage, TextMessage, Channel, User, Everybody, numericreply};
+use metallirc::modes;
+use metallirc::ServerData;
+use metallirc::users::UserData;
 
 use uuid::Uuid;
 
-use super::{RecyclingAction, Nothing};
-use super::{MessageSendingHandler, CommandHandler};
+use metallirc::modules::{RecyclingAction, Nothing};
+use metallirc::modules::{MessageSendingHandler, CommandHandler};
 
 pub struct CmdPrivmsgOrNotice;
 

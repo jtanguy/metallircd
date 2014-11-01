@@ -1,12 +1,12 @@
-use messages::{IRCMessage, numericreply};
-use modes;
-use scheduling::ServerData;
-use users::UserData;
+use metallirc::messages::{IRCMessage, numericreply};
+use metallirc::modes;
+use metallirc::ServerData;
+use metallirc::users::UserData;
 
 use uuid::Uuid;
 
-use super::{RecyclingAction, Nothing};
-use super::{CommandHandler, send_needmoreparams};
+use metallirc::modules::{RecyclingAction, Nothing};
+use metallirc::modules::{CommandHandler, send_needmoreparams};
 
 pub struct CmdTopic;
 

@@ -46,7 +46,7 @@ pub trait Module: 'static {
     fn get_vtable_for_trait(&self, _trait_id: TypeId) -> Option<&'static ()> { None }
 }
 
-#[macro_escape]
+#[macro_export]
 macro_rules! module {
     ($ty:ty is $($Trait:ty),+) => (
         impl ::metallirc::modules::Module for $ty {
@@ -89,6 +89,7 @@ impl<'a> ModuleRef<'a> for &'a Module+'static {
     }
 }
 
+#[macro_export]
 macro_rules! init_modules {
     ($($m:expr),+) => {
         vec!($(box $m as Box<Module + Send + Sync>),+)

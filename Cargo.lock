@@ -2,6 +2,34 @@
 name = "metallircd"
 version = "0.0.1"
 dependencies = [
+ "libmetallirc 0.0.1",
+ "mod_away 0.0.1",
+ "mod_core 0.0.1",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
+ "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git)",
+]
+
+[[package]]
+name = "libmetallirc"
+version = "0.0.1"
+dependencies = [
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
+ "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git)",
+]
+
+[[package]]
+name = "mod_away"
+version = "0.0.1"
+dependencies = [
+ "libmetallirc 0.0.1",
+ "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git)",
+]
+
+[[package]]
+name = "mod_core"
+version = "0.0.1"
+dependencies = [
+ "libmetallirc 0.0.1",
  "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
  "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git)",
 ]

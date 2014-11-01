@@ -2,20 +2,20 @@
 
 #![experimental]
 
-use conf::ServerConf;
-use logging::{Logger, Warning, Info};
-use messages::{IRCMessage, numericreply};
-use modes::UOperator;
-use scheduling::ServerData;
-use users::UserData;
+use metallirc::conf::ServerConf;
+use metallirc::logging::{Logger, Warning, Info};
+use metallirc::messages::{IRCMessage, numericreply};
+use metallirc::modes::UOperator;
+use metallirc::ServerData;
+use metallirc::users::UserData;
 
 use std::collections::TreeMap;
 
 use toml;
 use uuid::Uuid;
 
-use super::{RecyclingAction, Nothing};
-use super::{CommandHandler, send_needmoreparams};
+use metallirc::modules::{RecyclingAction, Nothing};
+use metallirc::modules::{CommandHandler, send_needmoreparams};
 
 pub struct CmdOper {
     opers: TreeMap<String, String>

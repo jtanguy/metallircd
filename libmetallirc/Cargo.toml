@@ -1,20 +1,16 @@
 [package]
 
-name = "metallircd"
+name = "libmetallirc"
 version = "0.0.1"
 authors = ["Victor Berger <victor.berger@m4x.org>"]
+
+[lib]
+name = "metallirc"
+crate_type = ["dylib"]
+test = true
 
 [dependencies.uuid]
 git = "https://github.com/rust-lang/uuid.git"
 
 [dependencies.toml]
 git = "https://github.com/alexcrichton/toml-rs"
-
-[dependencies.libmetallirc]
-path = "libmetallirc"
-
-[dependencies.mod_core]
-path = "metallirc_modules/core"
-
-[dependencies.mod_away]
-path = "metallirc_modules/away"

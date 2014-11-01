@@ -1,16 +1,27 @@
 //! Away module
 
+#![feature(if_let, phase)]
+
+#[phase(plugin)] extern crate metallirc;
+extern crate metallirc;
+extern crate uuid;
+
 use std::collections::HashMap;
 use std::sync::RWLock;
 
-use messages::{IRCMessage, TextMessage, User, numericreply};
-use scheduling::ServerData;
-use users::UserData;
-
 use uuid::Uuid;
 
-use super::{RecyclingAction, Nothing};
-use super::{MessageSendingHandler, CommandHandler};
+use metallirc::messages::{IRCMessage, TextMessage, User, numericreply};
+use metallirc::ServerData;
+use metallirc::users::UserData;
+
+use metallirc::modules::{RecyclingAction, Nothing};
+use metallirc::modules::{MessageSendingHandler, CommandHandler};
+
+// Public init()
+use metallirc::conf::ServerConf;
+use metallirc::modules::Module;
+use metallirc::logging::Logger;
 
 pub struct ModAway {
     messages: RWLock<HashMap<Uuid, String>>
@@ -77,4 +88,11 @@ impl MessageSendingHandler for ModAway {
         }}}}
         Some(msg)
     }
+}
+
+#[no_mangle]
+pub fn init(_: &ServerConf, _: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
+    init_modules!(
+        ModAway::init()
+    )
 }

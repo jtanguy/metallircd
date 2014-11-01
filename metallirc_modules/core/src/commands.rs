@@ -2,15 +2,15 @@
 
 #![experimental]
 
-use messages::{IRCMessage, numericreply};
-use scheduling::ServerData;
-use users::UserData;
-use util;
+use metallirc::messages::{IRCMessage, numericreply};
+use metallirc::ServerData;
+use metallirc::users::UserData;
+use metallirc::util;
 
 use uuid::Uuid;
 
-use super::{RecyclingAction, ChangeNick, Nothing, Zombify};
-use super::{CommandHandler, send_needmoreparams};
+use metallirc::modules::{RecyclingAction, ChangeNick, Nothing, Zombify};
+use metallirc::modules::{CommandHandler, send_needmoreparams};
 
 pub struct CmdNick;
 
