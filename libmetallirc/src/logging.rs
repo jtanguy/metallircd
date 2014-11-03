@@ -33,6 +33,7 @@ impl Logger {
             queue: MPSCQueue::new(),
             level: level
         };
+        logger.queue.push(String::new()); // newline at reboot
         logger.log(Info, format!("Initialised logging with level {}", level));
         logger
     }

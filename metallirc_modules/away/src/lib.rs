@@ -5,6 +5,7 @@
 #[phase(plugin)] extern crate metallirc;
 extern crate metallirc;
 extern crate uuid;
+extern crate toml;
 
 use std::collections::HashMap;
 use std::sync::RWLock;
@@ -19,7 +20,6 @@ use metallirc::modules::{RecyclingAction, Nothing};
 use metallirc::modules::{MessageSendingHandler, CommandHandler};
 
 // Public init()
-use metallirc::conf::ServerConf;
 use metallirc::modules::Module;
 use metallirc::logging::Logger;
 
@@ -91,7 +91,7 @@ impl MessageSendingHandler for ModAway {
 }
 
 #[no_mangle]
-pub fn init(_: &ServerConf, _: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
+pub fn init(_: &toml::TomlTable, _: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
     init_modules!(
         ModAway::init()
     )

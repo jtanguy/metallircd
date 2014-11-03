@@ -38,14 +38,13 @@ impl ServerData {
     /// Creates the server data structure from a config.
     pub fn new(settings: conf::ServerConf)-> ServerData {
         let logger = logging::Logger::new(settings.loglevel);
-        let modules_hdlr = modules::ModulesHandler::init(&settings, &logger);
         ServerData {
             settings: RWLock::new(settings),
             users: RWLock::new(users::UserManager::new()),
             channels: RWLock::new(channels::ChannelManager::new()),
             logger: logger,
             signal_shutdown: RWLock::new(false),
-            modules_handler: RWLock::new(modules_hdlr)
+            modules_handler: RWLock::new(modules::ModulesHandler::init())
         }
     }
 }

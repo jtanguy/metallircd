@@ -12,17 +12,18 @@ use toml;
 
 /// Loads a config file. Expected format with default values
 /// ```
-/// [ircd]
+/// [metallircd]
 /// server_name = <needed>
 /// address = <needed>
 /// port = <needed>
-///
-/// [logging]
-/// level = "Warning"
-/// file = "./metallircd.log"
-///
-/// [threads]
+/// loglevel = "Warning"
+/// logfile = "./metallircd.log"
 /// workers = 2
+///
+/// [[module]]
+/// name = "mod_name"
+/// path = "path/to/mod.so"
+/// <any other option>
 /// ```
 
 pub fn load_config(file: Path) -> Result<ServerConf,String> {
@@ -43,35 +44,28 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
 
     let mut config = ServerConf::default_conf();
 
-    // [ircd]
-    match toml_table.find(&"ircd".to_string()) {
+    // [metallircd]
+    match toml_table.find(&"metallircd".to_string()) {
         Some(&toml::Table(ref ircd_table)) => {
             config.name = match ircd_table.find(&"server_name".to_string()) {
                 Some(&toml::String(ref s)) => s.clone(),
                 _ => return Err(
-                    format!("Error parsing config file {} : missing or invalid ircd.server_name", file.display())
+                    format!("Error parsing config file {} : missing or invalid metallircd.server_name", file.display())
                 )
             };
             config.address = match ircd_table.find(&"address".to_string()) {
                 Some(&toml::String(ref s)) => s.clone(),
                 _ => return Err(
-                    format!("Error parsing config file {} : missing or invalid ircd.address", file.display())
+                    format!("Error parsing config file {} : missing or invalid metallircd.address", file.display())
                 )
             };
             config.port = match ircd_table.find(&"port".to_string()) {
                 Some(&toml::Integer(i)) => i as u16,
                 _ => return Err(
-                    format!("Error parsing config file {} : missing or invalid ircd.address", file.display())
+                    format!("Error parsing config file {} : missing or invalid metallircd.address", file.display())
                 )
             };
-        }
-        _ => return Err(format!("Error parsing config file {} : missing section [ircd].", file.display()))
-    }
-
-    // [logging]
-    match toml_table.find(&"logging".to_string()) {
-        Some(&toml::Table(ref logging_table)) => {
-             match logging_table.find(&"level".to_string()) {
+            match ircd_table.find(&"loglevel".to_string()) {
                 Some(&toml::String(ref s)) => match s.as_slice() {
                     "Debug" => config.loglevel = logging::Debug,
                     "Info" => config.loglevel = logging::Info,
@@ -81,29 +75,42 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
                 },
                 _ => {}
             };
-            match logging_table.find(&"file".to_string()) {
+            match ircd_table.find(&"logfile".to_string()) {
                 Some(&toml::String(ref s)) => match from_str::<Path>(s.as_slice()) {
                     Some(p) => config.logfile = p,
                     None => {}
                 },
                 _ => {}
             };
-        }
-        _ => {}
-    }
-
-    // [threads]
-    match toml_table.find(&"threads".to_string()) {
-        Some(&toml::Table(ref threads_table)) => {
-            match threads_table.find(&"workers".to_string()) {
+            match ircd_table.find(&"workers".to_string()) {
                 Some(&toml::Integer(i)) => config.thread_handler_count = i as uint,
                 _ => {}
             };
         }
-        _ => {}
+        _ => {
+            return Err("Could not find [metallircd] section in config file.".to_string())
+        }
     }
 
-    config.table = toml_table;
+    // [modules]
+    match toml_table.find(&"module".to_string()) {
+        Some(&toml::Table(ref modules_table)) => {
+            for (name, module) in modules_table.iter() {
+                if let &toml::Table(ref mod_table) = module {
+                    if mod_table.contains_key(&"path".to_string()) {
+                        // only take valid modules
+                        config.modules.insert(name.clone(), mod_table.clone());
+                    }
+                }
+            }
+        },
+        Some(_) => {
+            return Err("Module sections should be in the form [module.name] .".to_string())
+        },
+        None => {
+            // No modules ? ok...
+        }
+    }
 
     Ok(config)
 }

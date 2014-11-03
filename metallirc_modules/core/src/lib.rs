@@ -7,7 +7,6 @@ extern crate metallirc;
 extern crate toml;
 extern crate uuid;
 
-use metallirc::conf::ServerConf;
 use metallirc::modules::Module;
 use metallirc::logging::Logger;
 
@@ -20,7 +19,7 @@ mod textmessages;
 mod topic;
 
 #[no_mangle]
-pub fn init(conf: &ServerConf, logger: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
+pub fn init(conf: &toml::TomlTable, logger: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
     init_modules!(
         commands::CmdPing,
         textmessages::CmdPrivmsgOrNotice,

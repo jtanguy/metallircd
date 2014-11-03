@@ -33,7 +33,7 @@ fn main() {
 
     let matches = match getopts::getopts(args.tail(), opts) {
         Ok(m) => { m }
-        Err(f) => { fail!(f.to_string()) }
+        Err(f) => { panic!(f.to_string()) }
     };
 
     if matches.opt_present("h") {
@@ -74,6 +74,17 @@ fn main() {
     println!("Server initialised and running.")
 
     let srv_data = ServerData::new(serverconfig);
+
+    if let Some(config) = srv_data.settings.read().modules.find(&"core".to_string()) {
+        // core module must always be loaded first
+        srv_data.modules_handler.write().open_module("core", config, &srv_data.logger);
+    }
+
+    for (name, config) in srv_data.settings.read().modules.iter() {
+        if name.as_slice() != "core" {
+            srv_data.modules_handler.write().open_module(name.as_slice(), config, &srv_data.logger);
+        }
+    }
 
     scheduling::run_server(srv_data, acceptor);
 

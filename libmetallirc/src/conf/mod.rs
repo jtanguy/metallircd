@@ -26,7 +26,7 @@ pub struct ServerConf {
     pub thread_handler_count: uint,
 
     /// Contains the toml table of the config file, to be used by each module.
-    pub table: TomlTable
+    pub modules: TreeMap<String, TomlTable>
 }
 
 #[experimental]
@@ -47,7 +47,7 @@ impl ServerConf {
             thread_handler_count: 2u,
 
             // rest of the config file
-            table: TreeMap::new()
+            modules: TreeMap::new()
         }
     }
 

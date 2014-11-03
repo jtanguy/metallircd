@@ -1,22 +1,28 @@
-[ircd]
+[metallircd]
 # The name the server will use in its messages.
 server_name = "irc.example.com"
+
 # The address and port to listen to.
 address = "127.0.0.1"
 port = 6667
 
+# Loglevel of the server: Error, Warning, Info or Debug
+loglevel = "Info"
+# File to log to
+logfile = "metallirc.log"
+
+# Number of worker threads for client handling.
+workers = 2
+
+[module.core]
+# The core module, Highly recommended (or almost nothing can be done)
+path = "libmod_core.so"
 # List of allowed IRC operators
 operators = [
     ["login1", "password1"],
     ["login2", "password2"]
 ]
 
-[logging]
-# Loglevel of the server: Error, Warning, Info or Debug
-level = "Info"
-# File to log to
-file = "metallirc.log"
-
-[threads]
-# Number of worker threads for client handling.
-workers = 2
+[module.away]
+# The away module, handling AWAY commands
+path = "libmod_away.so"

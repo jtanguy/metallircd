@@ -19,13 +19,15 @@
 
 #![experimental]
 
-use conf::ServerConf;
-use logging::{Logger, Debug};
+use logging::{Logger, Debug, Error, Info};
 use messages::{IRCMessage, TextMessage, numericreply};
 use ServerData;
 use users::UserData;
 
 use uuid::Uuid;
+use toml;
+
+use std::dynamic_lib::DynamicLibrary;
 
 //
 //
@@ -99,18 +101,6 @@ macro_rules! init_modules {
 // End of Dangerous Zone
 //
 
-// declare your submodules here
-
-/*mod core_textmessages;
-mod core_commands;
-mod core_channels;
-mod core_oper;
-
-mod away;
-mod modes;
-mod list;
-mod topic;*/
-
 /// Special actions to be performed by the recycler thread (requiring `&mut` access to the UserManager).
 #[experimental]
 #[deriving(PartialEq)]
@@ -146,33 +136,63 @@ pub trait MessageSendingHandler : Send + Sync {
 ///
 /// It owns all modules instances and dispatches commands and messages to them.
 pub struct ModulesHandler {
+    libs: Vec<ModuleLib>
+}
+
+#[allow(dead_code)] // We reserve these attributes for future use
+struct ModuleLib {
+    name: String,
     modules: Vec<Box<Module + 'static + Send + Sync>>,
+    lib: DynamicLibrary
 }
 
 impl ModulesHandler {
     /// This method initialises all modules. It should be edited to add new modules.
     #[experimental]
-    #[allow(unused_variable)] // conf might be used ?
-    pub fn init(conf: &ServerConf, logger: &Logger) -> ModulesHandler {
+    pub fn init() -> ModulesHandler {
         // Put the modules here for them to be loaded
-        ModulesHandler {
-            modules: Vec::new() /*init_modules!(
-                core_commands::CmdPing,
-                core_textmessages::CmdPrivmsgOrNotice,
-                core_channels::CmdJoin,
-                core_channels::CmdPart,
-                core_channels::CmdNames,
-                modes::CmdMode,
-                away::ModAway::init(),
-                topic::CmdTopic,
-                list::CmdList,
-                core_oper::CmdOper::init(conf, logger),
-                core_commands::CmdNick,
-                core_commands::CmdQuit,
-                core_textmessages::QueryDispatcher,
-                core_textmessages::ChannelDispatcher,
-                core_oper::CmdDie
-            )*/
+        ModulesHandler { libs: Vec::new() }
+    }
+
+    pub fn open_module(&mut self, name: &str, cfg: &toml::TomlTable, logger: &Logger) {
+        let path = match cfg["path".to_string()] { 
+            toml::String(ref path_str) => match from_str::<Path>(path_str.as_slice()) {
+                Some(p) => p,
+                None => {
+                    logger.log(Error, format!("Invalid path for module {}.", name));
+                    return;
+                }
+            },
+            _ => {
+                logger.log(Error, format!("Invalid path for module {}.", name));
+                return;
+            }
+        };
+        logger.log(Info, format!("Opening library {} for module {}.", path.display(), name));
+        match DynamicLibrary::open(Some(path)) {
+            Err(e) => logger.log(Error, e),
+            Ok(lib) => {
+                let handle = unsafe {
+                    match lib.symbol("init") {
+                            Err(e) => { logger.log(Error, e); return },
+                            Ok(f) => {
+                                ::std::mem::transmute::<*mut u8,
+                                    fn(&toml::TomlTable, &Logger) ->
+                                        Vec<Box<Module + 'static + Send + Sync>>
+                                    >(f)
+                            },
+                    }
+                };
+                let new_modules = handle(cfg, logger);
+                logger.log(Info, format!("Loaded {} new traitment units by module {}.",new_modules.len(), name));
+                self.libs.push(
+                    ModuleLib {
+                        name: name.to_string(),
+                        modules: new_modules,
+                        lib: lib
+                    }
+                );
+            }
         }
     }
 
@@ -181,11 +201,13 @@ impl ModulesHandler {
     #[experimental]
     pub fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: IRCMessage, srv: &ServerData)
         -> RecyclingAction {
-        for m in self.modules.iter() {
-            if let Some(handler) = m.as_ref::<CommandHandler>() {
-                let (done, action) = handler.handle_command(user, user_uuid, &cmd, srv);
-                if done {
-                    return action;
+        for l in self.libs.iter().rev() {
+            for m in l.modules.iter() {
+                if let Some(handler) = m.as_ref::<CommandHandler>() {
+                    let (done, action) = handler.handle_command(user, user_uuid, &cmd, srv);
+                    if done {
+                        return action;
+                    }
                 }
             }
         }
@@ -204,12 +226,14 @@ impl ModulesHandler {
     /// Sends a message by processing it through all the handlers in order until onrof them consumes it.
     #[experimental]
     pub fn send_message(&self, mut msg: TextMessage, srv: &ServerData) {
-        for m in self.modules.iter() {
-            if let Some(handler) = m.as_ref::<MessageSendingHandler>() {
-                if let Some(m) = handler.handle_message_sending(msg, srv) {
-                    msg = m;
-                } else {
-                    return;
+        for l in self.libs.iter().rev() {
+            for m in l.modules.iter() {
+                if let Some(handler) = m.as_ref::<MessageSendingHandler>() {
+                    if let Some(m) = handler.handle_message_sending(msg, srv) {
+                        msg = m;
+                    } else {
+                        return;
+                    }
                 }
             }
         }

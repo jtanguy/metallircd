@@ -2,7 +2,6 @@
 
 #![experimental]
 
-use metallirc::conf::ServerConf;
 use metallirc::logging::{Logger, Warning, Info};
 use metallirc::messages::{IRCMessage, numericreply};
 use metallirc::modes::UOperator;
@@ -22,10 +21,9 @@ pub struct CmdOper {
 }
 
 impl CmdOper {
-    pub fn init(conf: &ServerConf, logger: &Logger) -> CmdOper {
+    pub fn init(conf: &toml::TomlTable, logger: &Logger) -> CmdOper {
         let mut opers = TreeMap::new();
-        if let Some(&toml::Table(ref ircd_section)) = conf.table.find(&"ircd".to_string()) {
-        if let Some(&toml::Array(ref oper_list)) = ircd_section.find(&"operators".to_string()) {
+        if let Some(&toml::Array(ref oper_list)) = conf.find(&"operators".to_string()) {
             for v in oper_list.iter() {
                 if let &toml::Array(ref oper) = v {
                 if oper.len() >= 2 {
@@ -39,8 +37,8 @@ impl CmdOper {
                                       Each entry should be in the format [\"login\", \"password\"].")
                 );
             }
-        }}
-        logger.log(Info, format!("{} operators were loaded from config file.", opers.len()));
+        }
+        logger.log(Info, format!("(mod_core) {} operators were loaded from config file.", opers.len()));
         CmdOper {
             opers: opers
         }
