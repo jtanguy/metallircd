@@ -4,7 +4,6 @@
 
 use metallirc::logging::{Logger, Warning, Info};
 use metallirc::messages::{IRCMessage, numericreply};
-use metallirc::modes::UOperator;
 use metallirc::ServerData;
 use metallirc::users::UserData;
 
@@ -55,7 +54,7 @@ impl CommandHandler for CmdOper {
         if let Some(args) = cmd.as_nparams(2,0) {
             if self.opers.find(&args[0]).map(|s| s == &args[1]).unwrap_or(false) {
                 // login successful
-                user.modes.write().insert(UOperator);
+                user.modes.write().set('o'.to_ascii(), true);
                 srv.logger.log(Info, format!("Operator {} logged in from user {}.", args[0], user.get_fullname()));
                 user.push_message(
                     IRCMessage {
@@ -99,7 +98,7 @@ impl CommandHandler for CmdDie {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "DIE" { return (false, Nothing); }
 
-        if user.modes.read().contains(UOperator) {
+        if user.modes.read().get('o'.to_ascii()) {
             srv.logger.log(Info, format!("Server Shutdown was requested by {}.", user.get_fullname()));
             *srv.signal_shutdown.write() = true
         } else {

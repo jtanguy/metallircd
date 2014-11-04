@@ -1,57 +1,58 @@
 //! Modes handling.
 
-use metallirc::channels::Channel;
+use metallirc::channels::Membership;
 use metallirc::messages::{IRCMessage, numericreply};
-use metallirc::modes;
 use metallirc::ServerData;
 use metallirc::users::UserData;
+
+use std::slice::Items;
 
 use uuid::Uuid;
 
 use metallirc::modules::{RecyclingAction, Nothing};
-use metallirc::modules::{CommandHandler, send_needmoreparams};
+use metallirc::modules::{CommandHandler, UserModeHandler, ChannelModeHandler};
+use metallirc::modules::send_needmoreparams;
 
 pub struct CmdMode;
 
-module!(CmdMode is CommandHandler)
+module!(CmdMode is CommandHandler, UserModeHandler, ChannelModeHandler)
 
 impl CommandHandler for CmdMode {
-    fn handle_command(&self, user: &UserData, user_uuid: &Uuid, cmd: &IRCMessage, srv: &ServerData)
+    fn handle_command(&self, user: &UserData, _: &Uuid, cmd: &IRCMessage, srv: &ServerData)
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "MODE" { return (false, Nothing); }
 
         if let Some(args) = cmd.as_nparams(1,14) {
-            if let Some(ref other) = srv.users.read().get_uuid_of_nickname(args[0].as_slice()) {
-                // It is an user !
-                if user_uuid == other {
-                    // it is me !
-                    if args.len() == 1 {
-                        // only checking modes
+            if let Some(other) = srv.users.read().get_user_by_nickname(args[0].as_slice()) {
+                // it is me !
+                if args.len() == 1 {
+                    // only checking modes, oper can read all
+                    if user.id == other.id || user.modes.read().get('o'.to_ascii()) {
                         user.push_message(
                             IRCMessage {
                                 prefix: Some(srv.settings.read().name.clone()),
                                 command: numericreply::RPL_UMODEIS.to_text(),
                                 args: vec!(
-                                    user.nickname.clone(),
-                                    user.modes.read().to_modestring()
+                                    other.nickname.clone(),
+                                    other.modes.read().to_modestring()
                                 ),
                                 suffix: None
                             }
                         );
                     } else {
-                        // Oh, you want to change somtheing ? Ok.
-                        update_user_mode(user, args, srv);
+                        // Looking someone's else modes ? No way !
+                        user.push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_USERSDONTMATCH.to_text(),
+                                args: vec!(user.nickname.clone()),
+                                suffix: Some("Can't change modes for other users.".to_string())
+                            }
+                        );
                     }
                 } else {
-                    // Looking someone's else modes ? No way !
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_USERSDONTMATCH.to_text(),
-                            args: vec!(user.nickname.clone()),
-                            suffix: Some("Can't change modes for other users.".to_string())
-                        }
-                    );
+                    // Oh, you want to change something ? Ok.
+                    update_user_mode(user, &*other, args, srv);
                 }
             } else if let Some(chan) = srv.channels.read().chan_handle(args[0].as_slice()) {
                 // avoid deadlock
@@ -81,22 +82,9 @@ impl CommandHandler for CmdMode {
                         );
                     } else {
                         // Trying to make modifications
-                        // avoid deadlock
-                        let is_oper = membership.modes.read().is_at_least(&modes::MOp);
-                        if is_oper || user.modes.read().contains(modes::UOperator) {
-                            let messages = update_chan_mode(user, &mut *chan.write(), &args, srv);
-                            for m in messages.into_iter() {
-                                srv.channels.read().send_to_chan(args[0].as_slice(), m, None);
-                            }
-                        } else {
-                            user.push_message(
-                                IRCMessage {
-                                    prefix: Some(srv.settings.read().name.clone()),
-                                    command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
-                                    args: vec!(user.nickname.clone(), args[0].clone()),
-                                    suffix: Some("You're not channel operator.".to_string())
-                                }
-                            );
+                        let messages = update_chan_mode(user, &*membership, &args, srv);
+                        for m in messages.into_iter() {
+                            srv.channels.read().send_to_chan(args[0].as_slice(), m, None);
                         }
                     }
                 } else {
@@ -126,44 +114,36 @@ impl CommandHandler for CmdMode {
     }
 }
 
-fn update_user_mode(user: &UserData, args: Vec<String>, srv: &ServerData) {
+fn update_user_mode(user: &UserData, other: &UserData, args: Vec<String>, srv: &ServerData) {
     let mut words = args.iter().skip(1);
-    let mut modes_handler = user.modes.write();
+    let handler = srv.modules_handler.read();
     while let Some(ref txt) = words.next() {
-        let (mut chars, remove) = if txt.as_slice().starts_with("-") {
+        let (mut chars, set) = if txt.as_slice().starts_with("+") {
             (txt.as_slice().chars().skip(1), true)
         } else {
-            (if txt.as_slice().starts_with("+") {
+            (if txt.as_slice().starts_with("-") {
                 txt.as_slice().chars().skip(1)
             } else {
                 txt.as_slice().chars().skip(0)
             },
             false)
         };
+        let mut response = if set { "+" } else { "-" }.to_string();
         for c in chars {
-            if (remove && modes::umodes_not_self_deactivable.contains_char(c))
-            || (!remove && modes::umodes_not_self_activable.contains_char(c)) {
-                // ignore.
-            } else if let Some(m) = modes::UserMode::from_char(c) {
-                if remove {
-                    modes_handler.remove(m);
+            if let Some(asc) = c.to_ascii_opt() {
+            if let Some(b) = handler.handle_usermode(user, other, asc, set, srv) {
+                if b {
+                    response.push(c);
                 } else {
-                    modes_handler.insert(m);
+                    user.push_message(
+                        IRCMessage {
+                            prefix: Some(srv.settings.read().name.clone()),
+                            command: numericreply::ERR_USERSDONTMATCH.to_text(),
+                            args: vec!(user.nickname.clone()),
+                            suffix: Some("Can't change modes for other users.".to_string())
+                        }
+                    );
                 }
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(user.get_fullname()),
-                        command: "MODE".to_string(),
-                        args: vec!(
-                            user.nickname.clone(),
-                            format!("{}{}",
-                                if remove { "-" } else { "+" },
-                                c
-                            )
-                        ),
-                        suffix: None
-                    }
-                );
             } else {
                 user.push_message(
                     IRCMessage {
@@ -173,92 +153,176 @@ fn update_user_mode(user: &UserData, args: Vec<String>, srv: &ServerData) {
                         suffix: Some(format!("Unknown MODE {}.", c))
                     }
                 );
+            }}
+        }
+        if response.len() > 1 {
+            user.push_message(
+                IRCMessage {
+                    prefix: Some(user.get_fullname()),
+                    command: "MODE".to_string(),
+                    args: vec!(response),
+                    suffix: None
+                }
+            );
+        }
+    }
+}
+
+fn update_chan_mode(user: &UserData, membership: &Membership,
+                    args: &Vec<String>,
+                    srv: &ServerData) -> Vec<IRCMessage> {
+    let mut messages = Vec::new();
+    let mut words = args.iter();
+    let handler = srv.modules_handler.read();
+    while let Some(ref txt) = words.next() {
+        let mut chars = txt.as_slice().chars();
+        let set = match chars.next() {
+            Some('+') => true,
+            Some('-') => false,
+            _ => continue
+        };
+        let mut response = if set { "+" } else { "-" }.to_string();
+        // keep track of current word status
+        let words_before = words.clone();
+        for c in chars {
+            if let Some(asc) = c.to_ascii_opt() {
+            if let Some(b) = handler.handle_channelmode(membership, asc, set, &mut words, srv) {
+                if b {
+                    response.push(c);
+                } else {
+                    user.push_message(
+                        IRCMessage {
+                            prefix: Some(srv.settings.read().name.clone()),
+                            command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
+                            args: vec!(user.nickname.clone(), args[0].clone()),
+                            suffix: Some(format!("You're not channel operator."))
+                        }
+                    );
+                }
+            } else {
+                user.push_message(
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_UMODEUNKNOWNFLAG.to_text(),
+                        args: vec!(user.nickname.clone()),
+                        suffix: Some(format!("Unknown MODE {}.", c))
+                    }
+                );
+            }}
+        }
+        if response.len() > 1 {
+            let mut msg_args = vec!(args[0].clone(), response);
+            for a in words_before.take(words.len() - words_before.len()) {
+                msg_args.push(a.clone());
+            }
+            messages.push(
+                IRCMessage {
+                    prefix: Some(user.get_fullname()),
+                    command: "MODE".to_string(),
+                    args: msg_args,
+                    suffix: None
+                }
+            );
+        }
+    }
+    messages
+}
+
+impl UserModeHandler for CmdMode {
+    /// If can handle given mode, do it and return `Some(true)` if the
+    /// transformation was allowed, `Some(false)` otherwise.
+    /// If the mode is uwknown, return `None`.
+    fn handle_usermode_request(&self, asker: &UserData, target: &UserData,
+                               flag: Ascii, set: bool,
+                               _: &ServerData) -> Option<bool> {
+        // forbid change if not on self for modes I handle
+        if asker.id != target.id
+        && "io".to_ascii().contains(&flag) {
+            return Some(false);
+        }
+
+        if set == true {
+            if "i".to_ascii().contains(&flag) {
+                // only certain flags are setable
+                target.modes.write().set(flag, true);
+                Some(true)
+            } else if "o".to_ascii().contains(&flag) {
+                // others are forbidden
+                Some(false)
+            } else {
+                // or uknown
+                None
+            }
+        } else {
+            if "io".to_ascii().contains(&flag) {
+                // only certain flags are removable
+                target.modes.write().set(flag, false);
+                Some(true)
+            } else if "".to_ascii().contains(&flag) {
+                // others are forbidden
+                Some(false)
+            } else {
+                // or uknown
+                None
             }
         }
     }
 }
 
-fn update_chan_mode(user: &UserData,
-                    chan: &mut Channel, args: &Vec<String>,
-                    srv: &ServerData) -> Vec<IRCMessage> {
-    let mut messages = Vec::new();
-    let mut words = args.iter();
-    while let Some(ref txt) = words.next() {
-        let mut chars = txt.as_slice().chars();
-        let remove = match chars.next() {
-            Some('+') => false,
-            Some('-') => true,
-            _ => continue
-        };
-        for c in chars {
-            if let Some(md) = modes::MembershipMode::from_char(c) {
-            if let Some(nick) = words.next() {
-                // It is a membership mode and we have a nick given
-                // If no nick is given we ignore it
-                if let Some(other) = srv.users.read().get_user_by_nickname(nick.as_slice()) {
-                    if let Some(membership) = other.membership(args[0].as_slice()) {
-                        if remove {
-                            membership.modes.write().remove(md);
-                        } else {
-                            membership.modes.write().insert(md)
-                        };
-                        messages.push(
-                            IRCMessage {
-                                prefix: Some(user.get_fullname()),
-                                command: "MODE".to_string(),
-                                args: vec!(
-                                    args[0].clone(),
-                                    format!("{}{}", if remove { "-" } else { "+" }.to_string(), c),
-                                    nick.clone()
-                                    ),
-                                suffix: None
-                            }
-                        );
+impl ChannelModeHandler for CmdMode {
+    /// If can handle given mode, do it and return `Some(true)` if the
+    /// transformation was allowed, `Some(false)` otherwise.
+    /// If the mode is uwknown, return `None`.
+    fn handle_chanmode_request(&self, asker: &Membership,
+                               flag: Ascii, set: bool,
+                               args: &mut Items<String>,
+                               srv: &ServerData) -> Option<bool> {
+        let _me = asker.user.upgrade().unwrap();
+        let me = _me.read();
+        // forbid change if not on oper for modes I handle, except
+        // network operatorswho can do as they please
+        if !asker.modes.read().get('o'.to_ascii())
+        && "ntvo".to_ascii().contains(&flag)
+        &&  !me.modes.read().get('o'.to_ascii()){
+            return Some(false);
+        }
+
+        let chan = asker.channel.upgrade().unwrap();
+
+        if "vo".to_ascii().contains(&flag) {
+            // it's a membership
+            if let Some(nick) = args.next() {
+
+                if let Some(target) = srv.users.read().get_user_by_nickname(nick.as_slice()) {
+                    if let Some(membership) = target.channels.read().find(&chan.read().name) {
+                        membership.modes.write().set(flag, set);
                     } else {
-                        user.push_message(
+                        me.push_message(
                             IRCMessage {
                                 prefix: Some(srv.settings.read().name.clone()),
                                 command: numericreply::ERR_USERNOTINCHANNEL.to_text(),
-                                args: vec!(user.nickname.clone(), nick.clone(), args[0].clone()),
+                                args: vec!(me.nickname.clone(), nick.clone(), chan.read().name.clone()),
                                 suffix: Some("They aren't on that channel.".to_string())
                             }
                         );
                     }
                 } else {
-                    user.push_message(
+                    me.push_message(
                         IRCMessage {
                             prefix: Some(srv.settings.read().name.clone()),
                             command: numericreply::ERR_NOSUCHNICK.to_text(),
-                            args: vec!(user.nickname.clone(), nick.clone()),
+                            args: vec!(me.nickname.clone(), nick.clone()),
                             suffix: Some("No such nick/channel.".to_string())
                         }
                     );
                 }
-            }} else if let Some(md) = modes::ChanMode::from_char(c) {
-                if remove { chan.modes.remove(md); } else { chan.modes.insert(md); }
-                messages.push(
-                    IRCMessage {
-                        prefix: Some(user.get_fullname()),
-                        command: "MODE".to_string(),
-                        args: vec!(
-                            args[0].clone(),
-                            format!("{}{}", if remove { "-" } else { "+" }.to_string(), c),
-                            ),
-                        suffix: None
-                    }
-                );
-            } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_UNKNOWNMODE.to_text(),
-                        args: vec!(user.nickname.clone(), c.to_string()),
-                        suffix: Some(format!("is unknown mode char to me for {}", args[0]))
-                    }
-                );
             }
+            Some(true)
+        } else if "nt".to_ascii().contains(&flag) {
+            chan.write().modes.set(flag, set);
+            Some(true)
+        } else {
+            None
         }
-
     }
-    messages
 }

@@ -10,7 +10,7 @@ use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use channels::Membership;
 use messages::IRCMessage;
-use modes::UserMode;
+use modes::Modes;
 use util;
 
 use uuid::Uuid;
@@ -27,7 +27,7 @@ pub struct UserData {
     pub username: String,
     pub hostname: String,
     pub realname: String,
-    pub modes: RWLock<UserMode>,
+    pub modes: RWLock<Modes>,
     pub channels: RWLock<HashMap<String, Arc<Membership>>>,
     /// is this user disconnected ?
     zombie: RWLock<bool>
@@ -91,7 +91,7 @@ impl UserData {
             hostname: hostname,
             realname: realname,
             channels: RWLock::new(HashMap::new()),
-            modes: RWLock::new(UserMode::empty()),
+            modes: RWLock::new(Modes::new()),
             zombie: RWLock::new(false)
         }
     }

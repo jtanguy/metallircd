@@ -11,7 +11,7 @@ use messages::IRCMessage;
 use uuid::Uuid;
 
 use super::chan::{Channel, Membership};
-use modes::MembershipMode;
+use modes::Modes;
 use util;
 use users::UserData;
 
@@ -41,7 +41,7 @@ impl ChannelManager {
         let membership = Arc::new(Membership {
             user: user.downgrade(),
             channel: chan.downgrade(),
-            modes: RWLock::new(MembershipMode::empty())
+            modes: RWLock::new(Modes::new())
         });
         chan.write().join(user.read().id.clone(), membership.downgrade());
         user.read().channels.write().insert(name.to_string(), membership);

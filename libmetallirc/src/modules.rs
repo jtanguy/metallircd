@@ -23,11 +23,14 @@ use logging::{Logger, Debug, Error, Info};
 use messages::{IRCMessage, TextMessage, numericreply};
 use ServerData;
 use users::UserData;
+use channels::Membership;
 
 use uuid::Uuid;
 use toml;
 
+use std::ascii::Ascii;
 use std::dynamic_lib::DynamicLibrary;
+use std::slice::Items;
 
 //
 //
@@ -130,6 +133,29 @@ pub trait MessageSendingHandler : Send + Sync {
     /// If returning None, the message won't go futher.
     #[experimental]
     fn handle_message_sending(&self, msg: TextMessage, srv: &ServerData) -> Option<TextMessage>;
+}
+
+/// A trait for modules handling user modes.
+#[experimental]
+pub trait UserModeHandler : Send + Sync {
+    /// If can handle given mode, do it and return `Some(true)` if the
+    /// transformation was allowed, `Some(false)` otherwise.
+    /// If the mode is uwknown, return `None`.
+    fn handle_usermode_request(&self, asker: &UserData, target: &UserData,
+                               flag: Ascii, set: bool,
+                               srv: &ServerData) -> Option<bool>;
+}
+
+/// A trait for modules handling channel modes.
+#[experimental]
+pub trait ChannelModeHandler : Send + Sync {
+    /// If can handle given mode, do it and return `Some(true)` if the
+    /// transformation was allowed, `Some(false)` otherwise.
+    /// If the mode is uwknown, return `None`.
+    fn handle_chanmode_request(&self, asker: &Membership,
+                               flag: Ascii, set: bool,
+                               args: &mut Items<String>,
+                               srv: &ServerData) -> Option<bool>;
 }
 
 /// The modules handler.
@@ -238,6 +264,47 @@ impl ModulesHandler {
             }
         }
         // if we reach this point, no handler consumed the message, we drop it.
+    }
+
+    /// Suggests the mode to all available handlers. Returns `Some(true)` if it was
+    /// handled, `Some(false)` if it was refused, and `None` if it was unknown.
+    #[experimental]
+    pub fn handle_usermode(&self, asker: &UserData, target: &UserData,
+                           flag: Ascii, set: bool,
+                           srv: &ServerData) -> Option<bool> {
+        for l in self.libs.iter().rev() {
+            for m in l.modules.iter() {
+                if let Some(handler) = m.as_ref::<UserModeHandler>() {
+                    let ret = handler.handle_usermode_request(asker, target, flag, set, srv);
+                    if ret.is_some() {
+                        return ret;
+                    }
+                }
+            }
+        }
+        // if we reach this point, the mode was not handled
+        None
+    }
+
+    /// Suggests the mode to all available handlers. Returns `Some(true)` if it was
+    /// handled, `Some(false)` if it was refused, and `None` if it was unknown.
+    #[experimental]
+    pub fn handle_channelmode(&self, membership: &Membership,
+                              flag: Ascii, set: bool,
+                              args: &mut Items<String>,
+                              srv: &ServerData) -> Option<bool> {
+        for l in self.libs.iter().rev() {
+            for m in l.modules.iter() {
+                if let Some(handler) = m.as_ref::<ChannelModeHandler>() {
+                    let ret = handler.handle_chanmode_request(membership, flag, set, args, srv);
+                    if ret.is_some() {
+                        return ret;
+                    }
+                }
+            }
+        }
+        // if we reach this point, the mode was not handled
+        None
     }
 }
 

@@ -2,6 +2,7 @@
 
 #![experimental]
 
+use std::ascii::Ascii;
 use std::collections::HashMap;
 use std::sync::{Weak, RWLock};
 
@@ -10,14 +11,14 @@ use time::now;
 use uuid::Uuid;
 
 use users::UserData;
-use modes::{MembershipMode, ChanMode};
+use modes::Modes;
 
 /// The membership of a user in a channel
 #[experimental]
 pub struct Membership {
     pub user: Weak<RWLock<UserData>>,
     pub channel: Weak<RWLock<Channel>>,
-    pub modes: RWLock<MembershipMode>
+    pub modes: RWLock<Modes>
 }
 
 /// A channel.
@@ -26,7 +27,7 @@ pub struct Channel {
     pub name: String,
     pub topic: String,
     members: HashMap<Uuid, Weak<Membership>>,
-    pub modes: ChanMode,
+    pub modes: Modes,
     pub creation_time: i64
 }
 
@@ -40,7 +41,7 @@ impl Channel {
             name: name,
             topic: String::new(),
             members: HashMap::new(),
-            modes: ChanMode::empty(),
+            modes: Modes::new(),
             creation_time: now().to_timespec().sec
         }
     }
@@ -98,30 +99,20 @@ impl Channel {
 
     /// Lists all members with given mode.
     #[experimental]
-    pub fn members_being(&self, mode: MembershipMode) -> Vec<Uuid> {
+    pub fn members_being(&self, mode: Ascii) -> Vec<Uuid> {
         let mut v = Vec::new();
         self.apply_to_members(|u, m| {
-            if m.modes.read().contains(mode.clone()) { v.push(u.clone()); }
-        });
-        v
-    }
-
-    /// Lists all members with given mode or better.
-    #[experimental]
-    pub fn members_at_least(&self, mode: MembershipMode) -> Vec<Uuid> {
-        let mut v = Vec::new();
-        self.apply_to_members(|u, m| {
-            if m.modes.read().is_at_least(&mode) { v.push(u.clone()); }
+            if m.modes.read().get(mode) { v.push(u.clone()); }
         });
         v
     }
 
     /// Lists all members with their best mode.
     #[experimental]
-    pub fn member_list(&self) -> Vec<(Uuid, MembershipMode)> {
+    pub fn member_list(&self) -> Vec<(Uuid, Modes)> {
         let mut v = Vec::with_capacity(self.members.len());
         self.apply_to_members(|u, m| {
-            v.push((u.clone(), m.modes.read().best_mode()));
+            v.push((u.clone(), m.modes.read().clone()));
         });
         v
     }

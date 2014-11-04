@@ -3,7 +3,6 @@
 #![experimental]
 
 use metallirc::messages::{IRCMessage, TextMessage, Channel, User, Everybody, numericreply};
-use metallirc::modes;
 use metallirc::ServerData;
 use metallirc::users::UserData;
 
@@ -126,7 +125,7 @@ impl MessageSendingHandler for ChannelDispatcher {
                     let user = umanager_handle.get_user_by_uuid(id).unwrap();
                     // check external messages
                     if srv.channels.read().chan_handle(chan.as_slice())
-                        .map(|c| c.read().modes.contains(modes::CNoExternalMsg)).unwrap_or(false) {
+                        .map(|c| c.read().modes.get('n'.to_ascii())).unwrap_or(false) {
                         // There is some checking to do
                         if user.membership(chan.as_slice()).is_none() {
                             user.push_message(
@@ -142,10 +141,10 @@ impl MessageSendingHandler for ChannelDispatcher {
                     }
                     // check moderated chan
                     if srv.channels.read().chan_handle(chan.as_slice())
-                        .map(|c| c.read().modes.contains(modes::CModerated)).unwrap_or(false) {
+                        .map(|c| c.read().modes.get('m'.to_ascii())).unwrap_or(false) {
                         // There is some checking to do
                         if !user.membership(chan.as_slice())
-                            .map(|m| m.modes.read().is_at_least(&modes::MVoice)).unwrap_or(false) {
+                            .map(|m| !m.modes.read().none()).unwrap_or(false) {
                             user.push_message(
                                 IRCMessage {
                                     prefix: Some(srv.settings.read().name.clone()),

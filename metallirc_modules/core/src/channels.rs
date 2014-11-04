@@ -162,9 +162,10 @@ pub fn send_names(me: &UserData, chan: &str, srv: &ServerData) {
     if let Some(handle) = srv.channels.read().chan_handle(chan) {
         handle.read().apply_to_members(|_, m| {
             let mut nextnick = String::new();
-            match m.modes.read().prefix() {
-                Some(c) => nextnick.push(c),
-                None => {}
+            if m.modes.read().get('o'.to_ascii()) {
+                nextnick.push('o');
+            } else if m.modes.read().get('v'.to_ascii()) {
+                nextnick.push('v');
             }
             nextnick.push_str(m.user.upgrade().unwrap().read().nickname.as_slice());
             if buffer.len() + nextnick.len() + 1 > 510 - msg.protocol_len() {

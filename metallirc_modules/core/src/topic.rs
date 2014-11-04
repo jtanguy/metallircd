@@ -1,5 +1,4 @@
 use metallirc::messages::{IRCMessage, numericreply};
-use metallirc::modes;
 use metallirc::ServerData;
 use metallirc::users::UserData;
 
@@ -42,8 +41,8 @@ impl CommandHandler for CmdTopic {
             } else {
                 // it's an attempt to modify it.
                 let can_modify = if let Some(m) = user.membership(args[0].as_slice()) {
-                    if !m.channel.upgrade().unwrap().read().modes.contains(modes::CLockTopic)
-                    || m.modes.read().is_at_least(&modes::MOp) {
+                    if !m.channel.upgrade().unwrap().read().modes.get('t'.to_ascii())
+                    || m.modes.read().get('o'.to_ascii()) {
                         true
                     } else {
                         user.push_message(
