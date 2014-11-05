@@ -67,10 +67,10 @@ impl Modes {
         let mut ret = "+".to_string();
         for i in range(0u8, 26) {
             if self.flags.get(i as uint) {
-                ret.push((i + 65) as char);
+                ret.push((i + 97) as char);
             }
             if self.flags.get((i + 26) as uint) {
-                ret.push((i + 97) as char);
+                ret.push((i + 65) as char);
             }
         }
         if ret.len() == 1 {
