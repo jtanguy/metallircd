@@ -282,7 +282,7 @@ impl ChannelModeHandler for CmdMode {
         // forbid change if not on oper for modes I handle, except
         // network operatorswho can do as they please
         if !asker.modes.read().get('o'.to_ascii())
-        && "ntvo".to_ascii().contains(&flag)
+        && "sntvo".to_ascii().contains(&flag)
         &&  !me.modes.read().get('o'.to_ascii()){
             return Some(false);
         }
@@ -318,7 +318,7 @@ impl ChannelModeHandler for CmdMode {
                 }
             }
             Some(true)
-        } else if "nt".to_ascii().contains(&flag) {
+        } else if "snt".to_ascii().contains(&flag) {
             chan.write().modes.set(flag, set);
             Some(true)
         } else {

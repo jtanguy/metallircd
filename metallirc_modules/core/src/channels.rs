@@ -128,18 +128,23 @@ impl CommandHandler for CmdNames {
 
         if let Some(args) = cmd.as_nparams(1,1) {
             for chan in args[0].as_slice().split_terminator(',') {
-                if srv.channels.read().has_chan(chan) {
-                    send_names(user, chan, srv);
-                } else {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_NOSUCHNICK.to_text(),
-                            args: vec!(user.nickname.clone(), chan.to_string()),
-                            suffix: Some("No such nick/channel.".to_string())
-                        }
-                    );
+                if let Some(handle) = srv.channels.read().chan_handle(chan) {
+                    // hide secret channels
+                    if (!handle.read().modes.get('s'.to_ascii()))
+                    || user.membership(chan).is_some() {
+                        send_names(user, chan, srv);
+                        // don't send error message
+                        continue;
+                    }
                 }
+                user.push_message(
+                    IRCMessage {
+                        prefix: Some(srv.settings.read().name.clone()),
+                        command: numericreply::ERR_NOSUCHNICK.to_text(),
+                        args: vec!(user.nickname.clone(), chan.to_string()),
+                        suffix: Some("No such nick/channel.".to_string())
+                    }
+                );
             }
         } else {
             send_needmoreparams(user, "NAMES", srv);

@@ -23,16 +23,25 @@ impl CommandHandler for CmdList {
                     if chan.contains_char('?') || chan.contains_char('*') {
                         // its a mask
                         srv.channels.read().apply_to_chans_matching(chan, |handle| {
-                            send_chan_in_list(user, handle, srv);
+                            // hide secret chans
+                            if !handle.modes.get('s'.to_ascii()) {
+                                send_chan_in_list(user, handle, srv);
+                            }
                         });
                     } else if let Some(handle) = srv.channels.read().chan_handle(chan) {
-                        send_chan_in_list(user, &*handle.read(), srv);
+                        // hide secret chans
+                        if !handle.read().modes.get('s'.to_ascii()) {
+                            send_chan_in_list(user, &*handle.read(), srv);
+                        }
                     }
                 }
             } else {
                 // we just want all channels
                 srv.channels.read().apply_to_chans(|handle| {
-                    send_chan_in_list(user, handle, srv);
+                    // hide secret chans
+                    if !handle.modes.get('s'.to_ascii()) {
+                        send_chan_in_list(user, handle, srv);
+                    }
                 });
             }
             user.push_message(

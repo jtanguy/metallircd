@@ -20,7 +20,22 @@ impl CommandHandler for CmdTopic {
             // first, find the chan
             let channels_handle = srv.channels.read();
             let chan_handle = match channels_handle.chan_handle(args[0].as_slice()) {
-                Some(h) => h,
+                Some(h) => {
+                    // hide secret chans
+                    if h.read().modes.get('s'.to_ascii())
+                    || !user.membership(args[0].as_slice()).is_some() {
+                        user.push_message(
+                            IRCMessage {
+                                prefix: Some(srv.settings.read().name.clone()),
+                                command: numericreply::ERR_NOSUCHNICK.to_text(),
+                                args: vec!(user.nickname.clone(), args[0].clone()),
+                                suffix: Some("No such nick/channel.".to_string())
+                            }
+                        );
+                        return (true, Nothing);
+                    }
+                    h
+                },
                 None => {
                     user.push_message(
                         IRCMessage {
