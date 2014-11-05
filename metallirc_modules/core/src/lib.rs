@@ -4,6 +4,7 @@
 
 #[phase(plugin)] extern crate metallirc;
 extern crate metallirc;
+extern crate time;
 extern crate toml;
 extern crate uuid;
 
@@ -13,6 +14,7 @@ use metallirc::logging::Logger;
 mod channels;
 mod commands;
 mod list;
+mod misc;
 mod modes;
 mod oper;
 mod textmessages;
@@ -32,6 +34,7 @@ pub fn init(conf: &toml::TomlTable, logger: &Logger) -> Vec<Box<Module + 'static
         oper::CmdOper::init(conf, logger),
         commands::CmdNick,
         commands::CmdQuit,
+        misc::CmdTime,
         textmessages::QueryDispatcher,
         textmessages::ChannelDispatcher,
         oper::CmdDie
