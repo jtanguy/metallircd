@@ -23,7 +23,7 @@ impl CommandHandler for CmdTime {
                 prefix: Some(srv.settings.read().name.clone()),
                 command: numericreply::RPL_TIME.to_text(),
                 args: vec!(user.nickname.clone(), srv.settings.read().name.clone()),
-                suffix: Some(now().rfc822z())
+                suffix: Some(now().rfc822z().to_string())
             }
         );
 

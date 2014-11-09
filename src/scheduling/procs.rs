@@ -45,7 +45,7 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                     Ok(mut socket) => {
                         // prepare the new connection
                         socket.set_timeout(Some(0));
-                        inc_list.push(users::NewUser::new(BufferedStream::new(socket)));
+                        inc_list.push_back(users::NewUser::new(BufferedStream::new(socket)));
                     },
                     // TODO : handle errors other than timeout
                     Err(_) => {}
@@ -78,11 +78,11 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                             Err(mut nu) => {
                                 // nick was already in use !
                                 nu.report_unavailable_nick(&*srv.settings.read());
-                                not_finished.push(nu);
+                                not_finished.push_back(nu);
                             }
                         }
                     } else {
-                        not_finished.push(u);
+                        not_finished.push_back(u);
                     }
                 }
                 inc_list = not_finished;

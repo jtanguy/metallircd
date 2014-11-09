@@ -63,24 +63,24 @@ impl UserManager {
 
     #[experimental]
     pub fn arc_ref<'a>(&'a self, id: &Uuid) -> Option<&'a Arc<RWLock<UserData>>> {
-        self.users.find(id)
+        self.users.get(id)
     }
 
     #[experimental]
     pub fn get_user_by_uuid<'a>(&'a self, id: &Uuid) -> Option<RWLockReadGuard<UserData>> {
-        self.users.find(id).map(|u| u.read())
+        self.users.get(id).map(|u| u.read())
     }
 
     #[experimental]
     pub fn get_uuid_of_nickname(&self, nick: &str) -> Option<Uuid> {
-        self.nicks.find(&util::label_to_lower(nick)).map(|id| id.clone())
+        self.nicks.get(&util::label_to_lower(nick)).map(|id| id.clone())
     }
 
     #[experimental]
     pub fn get_user_by_nickname<'a>(&'a self, nick: &str) -> Option<RWLockReadGuard<UserData>> {
         // we should *never* have a nick for a unexistent user
         // so .unwrap() should *never* fail
-        self.nicks.find(&util::label_to_lower(nick)).map(|id| self.users.find(id).unwrap().read())
+        self.nicks.get(&util::label_to_lower(nick)).map(|id| self.users.get(id).unwrap().read())
     }
 
     /// Fetches all uuid whose nickname matches mask
@@ -133,8 +133,8 @@ impl UserManager {
 
     #[experimental]
     pub fn del_user(&mut self, id: &Uuid) {
-        match self.users.pop(id) {
-            Some(user_data) => { self.nicks.pop(&user_data.read().nickname); }
+        match self.users.remove(id) {
+            Some(user_data) => { self.nicks.remove(&user_data.read().nickname); }
             None => {}
         }
     }

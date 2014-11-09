@@ -76,7 +76,7 @@ impl MessageSendingHandler for ModAway {
         if !msg.notice { // it's a PRIVMSG
         if let User(ref tid, ref tnick) = msg.target { // from a user
         if let User(ref sid, ref snick) = msg.source { // to a user
-        if let Some(txt) = self.messages.read().find(tid) { // and the target is away
+        if let Some(txt) = self.messages.read().get(tid) { // and the target is away
             srv.users.read().get_user_by_uuid(sid).unwrap().push_message(
                 IRCMessage {
                     prefix: Some(srv.settings.read().name.clone()),

@@ -45,27 +45,32 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
     let mut config = ServerConf::default_conf();
 
     // [metallircd]
-    match toml_table.find(&"metallircd".to_string()) {
+    match toml_table.get(&"metallircd".to_string()) {
         Some(&toml::Table(ref ircd_table)) => {
-            config.name = match ircd_table.find(&"server_name".to_string()) {
+            config.name = match ircd_table.get(&"server_name".to_string()) {
                 Some(&toml::String(ref s)) => s.clone(),
                 _ => return Err(
                     format!("Error parsing config file {} : missing or invalid metallircd.server_name", file.display())
                 )
             };
-            config.address = match ircd_table.find(&"address".to_string()) {
-                Some(&toml::String(ref s)) => s.clone(),
+            config.address = match ircd_table.get(&"address".to_string()) {
+                Some(&toml::String(ref s)) => match from_str(s.as_slice()) {
+                    Some(addr) => addr,
+                    None => return Err(
+                    format!("Error parsing config file {} : invalid metallircd.address {}", file.display(), s)
+                )
+                },
                 _ => return Err(
                     format!("Error parsing config file {} : missing or invalid metallircd.address", file.display())
                 )
             };
-            config.port = match ircd_table.find(&"port".to_string()) {
+            config.port = match ircd_table.get(&"port".to_string()) {
                 Some(&toml::Integer(i)) => i as u16,
                 _ => return Err(
                     format!("Error parsing config file {} : missing or invalid metallircd.address", file.display())
                 )
             };
-            match ircd_table.find(&"loglevel".to_string()) {
+            match ircd_table.get(&"loglevel".to_string()) {
                 Some(&toml::String(ref s)) => match s.as_slice() {
                     "Debug" => config.loglevel = logging::Debug,
                     "Info" => config.loglevel = logging::Info,
@@ -75,14 +80,14 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
                 },
                 _ => {}
             };
-            match ircd_table.find(&"logfile".to_string()) {
+            match ircd_table.get(&"logfile".to_string()) {
                 Some(&toml::String(ref s)) => match from_str::<Path>(s.as_slice()) {
                     Some(p) => config.logfile = p,
                     None => {}
                 },
                 _ => {}
             };
-            match ircd_table.find(&"workers".to_string()) {
+            match ircd_table.get(&"workers".to_string()) {
                 Some(&toml::Integer(i)) => config.thread_handler_count = i as uint,
                 _ => {}
             };
@@ -93,7 +98,7 @@ pub fn load_config(file: Path) -> Result<ServerConf,String> {
     }
 
     // [modules]
-    match toml_table.find(&"module".to_string()) {
+    match toml_table.get(&"module".to_string()) {
         Some(&toml::Table(ref modules_table)) => {
             for (name, module) in modules_table.iter() {
                 if let &toml::Table(ref mod_table) = module {

@@ -7,6 +7,7 @@ use logging::{LogLevel, Warning};
 pub use self::cfgfile::load_config;
 
 use std::collections::TreeMap;
+use std::io::net::ip::{IpAddr, Ipv4Addr};
 use toml::TomlTable;
 
 mod cfgfile;
@@ -15,7 +16,7 @@ mod cfgfile;
 pub struct ServerConf {
     // generic
     pub name: String,
-    pub address: String,
+    pub address: IpAddr,
     pub port: u16,
 
     // logs
@@ -36,7 +37,7 @@ impl ServerConf {
     pub fn default_conf() -> ServerConf {
         ServerConf {
             name: String::new(), // no default
-            address: String::new(), // no default
+            address: Ipv4Addr(0,0,0,0), // no default
             port: 0u16, // no default
 
             // logs

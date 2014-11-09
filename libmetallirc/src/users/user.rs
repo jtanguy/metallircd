@@ -150,6 +150,6 @@ impl UserData {
     #[experimental]
     pub fn membership<'a>(&'a self, chan: &str) -> Option<Arc<Membership>> {
         let lowerchan = util::label_to_lower(chan);
-        self.channels.read().find(&lowerchan).map(|a| a.clone())
+        self.channels.read().get(&lowerchan).map(|a| a.clone())
     }
 }

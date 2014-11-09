@@ -294,7 +294,7 @@ impl ChannelModeHandler for CmdMode {
             if let Some(nick) = args.next() {
 
                 if let Some(target) = srv.users.read().get_user_by_nickname(nick.as_slice()) {
-                    if let Some(membership) = target.channels.read().find(&chan.read().name) {
+                    if let Some(membership) = target.channels.read().get(&chan.read().name) {
                         membership.modes.write().set(flag, set);
                     } else {
                         me.push_message(

@@ -22,7 +22,7 @@ pub struct CmdOper {
 impl CmdOper {
     pub fn init(conf: &toml::TomlTable, logger: &Logger) -> CmdOper {
         let mut opers = TreeMap::new();
-        if let Some(&toml::Array(ref oper_list)) = conf.find(&"operators".to_string()) {
+        if let Some(&toml::Array(ref oper_list)) = conf.get(&"operators".to_string()) {
             for v in oper_list.iter() {
                 if let &toml::Array(ref oper) = v {
                 if oper.len() >= 2 {
@@ -52,7 +52,7 @@ impl CommandHandler for CmdOper {
         if cmd.command.as_slice() != "OPER" { return (false, Nothing); }
 
         if let Some(args) = cmd.as_nparams(2,0) {
-            if self.opers.find(&args[0]).map(|s| s == &args[1]).unwrap_or(false) {
+            if self.opers.get(&args[0]).map(|s| s == &args[1]).unwrap_or(false) {
                 // login successful
                 user.modes.write().set('o'.to_ascii(), true);
                 srv.logger.log(Info, format!("Operator {} logged in from user {}.", args[0], user.get_fullname()));

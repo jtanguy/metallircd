@@ -3,7 +3,7 @@
 #![experimental]
 
 use std::collections::HashMap;
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hash_map::{Occupied, Vacant};
 use std::sync::{Arc, RWLock};
 
 use messages::IRCMessage;
@@ -53,7 +53,7 @@ impl ChannelManager {
     #[experimental]
     pub fn join(&self, user: &Arc<RWLock<UserData>>, chan: &str) -> bool {
         let lowerchan = util::label_to_lower(chan);
-        match self.chans.find(&lowerchan) {
+        match self.chans.get(&lowerchan) {
             Some(chan_arc) => {
                 ChannelManager::do_join(user, chan_arc, lowerchan);
                 true
@@ -89,7 +89,7 @@ impl ChannelManager {
     pub fn destroy_if_empty(&mut self, chan: &str) -> bool {
         let lower_chan = util::label_to_lower(chan);
         if self.chans.contains_key(&lower_chan)
-        && self.chans.find(&lower_chan).unwrap().read().is_empty() {
+        && self.chans.get(&lower_chan).unwrap().read().is_empty() {
             self.chans.remove(&lower_chan);
             true
         } else {
@@ -101,7 +101,7 @@ impl ChannelManager {
     /// Returns false if the chan didn't exists.
     #[experimental]
     pub fn send_to_chan(&self, chan: &str, msg: IRCMessage, exclude: Option<Uuid>) -> bool {
-        match self.chans.find(&util::label_to_lower(chan)) {
+        match self.chans.get(&util::label_to_lower(chan)) {
             None => false,
             Some(ref channel) => {
                 match exclude {
@@ -122,7 +122,7 @@ impl ChannelManager {
     /// Returns a handle to given chan
     #[experimental]
     pub fn chan_handle<'a>(&'a self, chan: &str) -> Option<&'a RWLock<Channel>> {
-        self.chans.find(&util::label_to_lower(chan.as_slice())).map(|a| &**a)
+        self.chans.get(&util::label_to_lower(chan.as_slice())).map(|a| &**a)
     }
 
     /// Apply given closure to all chans.

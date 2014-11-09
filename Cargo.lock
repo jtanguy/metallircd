@@ -37,10 +37,10 @@ dependencies = [
 [[package]]
 name = "toml"
 version = "0.1.0"
-source = "git+https://github.com/alexcrichton/toml-rs#902b3c6f8f6a5b23f7f6824a12d951527cb11d86"
+source = "git+https://github.com/alexcrichton/toml-rs#796a127adf15e074f6483da5885dbf26535755b9"
 
 [[package]]
 name = "uuid"
 version = "0.0.1"
-source = "git+https://github.com/rust-lang/uuid.git#4e911041a20dc1a55d76a8fd5618b5167e481b62"
+source = "git+https://github.com/rust-lang/uuid.git#7c5af48d4f9074717199e05a1895f42b9fb1c1f0"
 

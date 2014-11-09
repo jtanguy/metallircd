@@ -11,6 +11,7 @@ extern crate metallirc;
 
 use std::io::Listener;
 use std::io::net::tcp::TcpListener;
+use std::io::net::ip::SocketAddr;
 use std::os;
 
 use metallirc::{conf, ServerData};
@@ -58,7 +59,11 @@ fn main() {
     };
 
     // new clients handler
-    let listener = match TcpListener::bind(serverconfig.address.as_slice(), serverconfig.port) {
+    let listener = match TcpListener::bind(
+        SocketAddr {
+            ip: serverconfig.address,
+            port: serverconfig.port
+        }) {
         Ok(l) => l,
         Err(e) => { println!("Could not bind port: {}", e); os::set_exit_status(1); return }
     };
@@ -75,7 +80,7 @@ fn main() {
 
     let srv_data = ServerData::new(serverconfig);
 
-    if let Some(config) = srv_data.settings.read().modules.find(&"core".to_string()) {
+    if let Some(config) = srv_data.settings.read().modules.get(&"core".to_string()) {
         // core module must always be loaded first
         srv_data.modules_handler.write().open_module("core", config, &srv_data.logger);
     }
