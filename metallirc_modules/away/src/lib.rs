@@ -46,6 +46,7 @@ impl CommandHandler for ModAway {
             if let Some(msg) = args.pop() {
                 // new away message
                 self.messages.write().insert(user_uuid.clone(), msg);
+                user.modes.write().set('a'.to_ascii(), true);
                 user.push_numreply(
                     numericreply::RPL_NOWAWAY,
                     srv.settings.read().name.as_slice()
@@ -53,6 +54,7 @@ impl CommandHandler for ModAway {
             } else {
                 // unmark away status
                 self.messages.write().remove(user_uuid);
+                user.modes.write().set('a'.to_ascii(), false);
                 user.push_numreply(
                     numericreply::RPL_UNAWAY,
                     srv.settings.read().name.as_slice()

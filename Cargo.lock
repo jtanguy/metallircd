@@ -22,6 +22,7 @@ name = "mod_away"
 version = "0.0.1"
 dependencies = [
  "libmetallirc 0.0.1",
+ "toml 0.1.0 (git+https://github.com/alexcrichton/toml-rs)",
  "uuid 0.0.1 (git+https://github.com/rust-lang/uuid.git)",
 ]
 
