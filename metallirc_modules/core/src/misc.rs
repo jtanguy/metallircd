@@ -18,13 +18,12 @@ impl CommandHandler for CmdTime {
         -> (bool, RecyclingAction) {
         if cmd.command.as_slice() != "TIME" { return (false, Nothing); }
 
-        user.push_message(
-            IRCMessage {
-                prefix: Some(srv.settings.read().name.clone()),
-                command: numericreply::RPL_TIME.to_text(),
-                args: vec!(user.nickname.clone(), srv.settings.read().name.clone()),
-                suffix: Some(now().rfc822z().to_string())
-            }
+        user.push_numreply(
+            numericreply::RPL_TIME(
+                srv.settings.read().name.as_slice(),
+                now().rfc822z().to_string().as_slice()
+            ),
+            srv.settings.read().name.as_slice()
         );
 
         (true, Nothing)

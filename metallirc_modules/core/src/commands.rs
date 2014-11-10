@@ -26,13 +26,9 @@ impl CommandHandler for CmdNick {
             if util::check_label(nick.as_slice()) {
                 if nick != user.nickname { return (true, ChangeNick(nick)) }
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_ERRONEUSNICKNAME.to_text(),
-                        args: vec!(user.nickname.clone(), nick),
-                        suffix: Some("Erroneous nickname.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::ERR_ERRONEUSNICKNAME(nick.as_slice()),
+                    srv.settings.read().name.as_slice()
                 );
             }
         } else {

@@ -48,9 +48,9 @@ impl Channel {
 
     /// Returns the number of users in the chan.
     #[experimental]
-    pub fn member_count(&self) -> uint {
+    pub fn member_count(&self) -> u32 {
         // We don't want to count ghost members
-        let mut count = 0u;
+        let mut count = 0u32;
         self.apply_to_members(|_, _| { count += 1; });
         count
     }

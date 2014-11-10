@@ -13,7 +13,7 @@ use std::sync::deque::{Stealer, Worker};
 use std::task::TaskBuilder;
 use std::time::duration::Duration;
 
-use metallirc::messages::{numericreply, IRCMessage};
+use metallirc::messages::numericreply;
 use metallirc::modules;
 use metallirc::modules::RecyclingAction;
 
@@ -62,14 +62,12 @@ pub fn spawn_newclients_handler(srv: Arc<ServerData>,
                                 // user was successfully inserted
                                 let my_user = manager_handle.get_user_by_uuid(&id).unwrap();
                                 // welcome the new user
-                                my_user.push_message(
-                                    IRCMessage {
-                                        prefix: Some(srv.settings.read().name.clone()),
-                                        command: numericreply::RPL_WELCOME.to_text(),
-                                        args: vec!(my_user.nickname.clone()),
-                                        suffix: Some(format!("Welcome to metallirc IRC Network {}",
-                                                    my_user.get_fullname().as_slice()))
-                                    }
+                                my_user.push_numreply(
+                                    numericreply::RPL_WELCOME(
+                                        "metallirc IRC Network",
+                                        my_user.get_fullname().as_slice()
+                                    ),
+                                    srv.settings.read().name.as_slice()
                                 );
                                 srv.logger.log(Debug,
                                     format!("New user {} with UUID {}.", my_user.get_fullname(), id));

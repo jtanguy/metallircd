@@ -36,14 +36,9 @@ impl NewUser {
     }
 
     #[experimental]
-    fn err_reply(&mut self, server: &ServerConf, code: numericreply::NumericReply, arg: &str, suffix: &str) {
+    fn err_reply(&mut self, server: &ServerConf, rpl: numericreply::NumericReply) {
         if util::write_message(&mut self.socket,
-                IRCMessage {
-                    prefix: Some(server.name.clone()),
-                    command: code.to_text(),
-                    args: vec!(arg.to_string()),
-                    suffix: Some(suffix.to_string())
-                }
+                rpl.into_prefixed_message("", server.name.as_slice())
             ).is_err()
         {
             self.zombie = true;
@@ -64,22 +59,17 @@ impl NewUser {
                         self.username = Some(args[0].clone());
                         self.realname = Some(args[3].clone());
                     } else {
-                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
-                                        "USER",
-                                        "Not enough parameters.")
+                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS("USER"))
                     },
                     "NICK" => if let Some(mut args) = msg.as_nparams(1,0) {
                         let nick = args.pop().unwrap();
                         if util::check_label(nick.as_slice()) {
                             self.nickname = Some(nick);
                         } else {
-                            self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME, "",
-                               format!("{} : Erroneous nickname.", nick).as_slice());
+                            self.err_reply(server, numericreply::ERR_ERRONEUSNICKNAME(nick.as_slice()));
                         }
                     }else {
-                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS,
-                                        "NICK",
-                                        "Not enough parameters.")
+                        self.err_reply(server, numericreply::ERR_NEEDMOREPARAMS("NICK"))
                     },
                     _ => {}
                 },
@@ -90,10 +80,7 @@ impl NewUser {
                 // timeouts are normal
                 io::TimedOut => { return; },
                 // not valid UTF8 ?
-                io::InvalidInput => self.err_reply(server,
-                                                   numericreply::ERR_UNKNOWNCOMMAND,
-                                                   "UTF8-required",
-                                                   "Only UTF8 input is supported."),
+                io::InvalidInput => self.err_reply(server, numericreply::ERR_UNKNOWNCOMMAND("UTF8-required")),
                 // other errors means death, I guess ?
                 // TODO : be sure of it
                 _ => { self.zombie = true; }
@@ -111,7 +98,7 @@ impl NewUser {
     #[experimental]
     pub fn report_unavailable_nick(&mut self, server: &ServerConf) {
         let oldnick = self.nickname.take().unwrap();
-        self.err_reply(server, numericreply::ERR_NICKNAMEINUSE, oldnick.as_slice(), "Nickname is already in use.");
+        self.err_reply(server, numericreply::ERR_NICKNAMEINUSE(oldnick.as_slice()));
         self.nickname = None;
     }
 

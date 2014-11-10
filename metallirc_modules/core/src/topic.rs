@@ -24,26 +24,18 @@ impl CommandHandler for CmdTopic {
                     // hide secret chans
                     if h.read().modes.get('s'.to_ascii())
                     || !user.membership(args[0].as_slice()).is_some() {
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_NOSUCHNICK.to_text(),
-                                args: vec!(user.nickname.clone(), args[0].clone()),
-                                suffix: Some("No such nick/channel.".to_string())
-                            }
+                        user.push_numreply(
+                            numericreply::ERR_NOSUCHNICK(args[0].as_slice()),
+                            srv.settings.read().name.as_slice()
                         );
                         return (true, Nothing);
                     }
                     h
                 },
                 None => {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_NOSUCHNICK.to_text(),
-                            args: vec!(user.nickname.clone(), args[0].clone()),
-                            suffix: Some("No such nick/channel.".to_string())
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_NOSUCHNICK(args[0].as_slice()),
+                        srv.settings.read().name.as_slice()
                     );
                     return (true, Nothing);
                 }
@@ -60,24 +52,16 @@ impl CommandHandler for CmdTopic {
                     || m.modes.read().get('o'.to_ascii()) {
                         true
                     } else {
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
-                                args: vec!(user.nickname.clone(), args[0].clone()),
-                                suffix: Some("You're not channel operator&.".to_string())
-                            }
+                        user.push_numreply(
+                            numericreply::ERR_CHANOPRIVSNEEDED(args[0].as_slice()),
+                            srv.settings.read().name.as_slice()
                         );
                         false
                     }
                 } else {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_NOTONCHANNEL.to_text(),
-                            args: vec!(user.nickname.clone(), args[0].clone()),
-                            suffix: Some("You're not on that channel.".to_string())
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_NOTONCHANNEL(args[0].as_slice()),
+                        srv.settings.read().name.as_slice()
                     );
                     false
                 };
@@ -107,22 +91,14 @@ impl CommandHandler for CmdTopic {
 
 pub fn send_topic_to_user(user: &UserData, topic: &str, channame: &str, srv: &ServerData) {
     if topic.len() == 0 {
-        user.push_message(
-            IRCMessage {
-                prefix: Some(srv.settings.read().name.clone()),
-                command: numericreply::RPL_NOTOPIC.to_text(),
-                args: vec!(user.nickname.clone(), channame.to_string()),
-                suffix: Some("No topic is set.".to_string())
-            }
+        user.push_numreply(
+            numericreply::RPL_NOTOPIC(channame),
+            srv.settings.read().name.as_slice()
         );
     } else {
-        user.push_message(
-            IRCMessage {
-                prefix: Some(srv.settings.read().name.clone()),
-                command: numericreply::RPL_TOPIC.to_text(),
-                args: vec!(user.nickname.clone(), channame.to_string()),
-                suffix: Some(topic.to_string())
-            }
+        user.push_numreply(
+            numericreply::RPL_TOPIC(channame.as_slice(), topic.as_slice()),
+            srv.settings.read().name.as_slice()
         );
     }
 }

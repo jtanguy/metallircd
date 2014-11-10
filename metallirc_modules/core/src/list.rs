@@ -44,13 +44,9 @@ impl CommandHandler for CmdList {
                     }
                 });
             }
-            user.push_message(
-                IRCMessage {
-                    prefix: Some(srv.settings.read().name.clone()),
-                    command: numericreply::RPL_LISTEND.to_text(),
-                    args: vec!(user.nickname.clone()),
-                    suffix: Some("End of LIST.".to_string())
-                }
+            user.push_numreply(
+                numericreply::RPL_LISTEND,
+                srv.settings.read().name.as_slice()
             );
         } else {
             unreachable!();
@@ -62,16 +58,12 @@ impl CommandHandler for CmdList {
 
 #[inline(always)]
 fn send_chan_in_list(user: &UserData, chandle: &Channel, srv: &ServerData) {
-    user.push_message(
-        IRCMessage {
-            prefix: Some(srv.settings.read().name.clone()),
-            command: numericreply::RPL_LIST.to_text(),
-            args: vec!(
-                user.nickname.clone(),
-                chandle.name.to_string(),
-                chandle.member_count().to_string(),
-            ),
-            suffix: Some(chandle.topic.clone())
-        }
+    user.push_numreply(
+        numericreply::RPL_LIST(
+            chandle.name.as_slice(),
+            chandle.member_count(),
+            chandle.topic.as_slice()
+        ),
+        srv.settings.read().name.as_slice()
     );
 }

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard, RWLock};
 use std::sync::mpsc_queue::Queue as MPSCQueue;
 
 use channels::Membership;
-use messages::IRCMessage;
+use messages::{IRCMessage, NumericReply};
 use modes::Modes;
 use util;
 
@@ -100,6 +100,14 @@ impl UserData {
     #[experimental]
     pub fn push_message(&self, msg: IRCMessage) {
         self.queue.push(msg);
+    }
+
+    /// Pushes a numeric reply to this user's personnal queue.
+    #[experimental]
+    pub fn push_numreply(&self, rpl: NumericReply, prefix: &str) {
+        self.queue.push(
+            rpl.into_prefixed_message(self.nickname.as_slice(), prefix)
+        );
     }
 
     /// Sends given message to all known users

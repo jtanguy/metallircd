@@ -239,12 +239,8 @@ impl ModulesHandler {
         }
         srv.logger.log(Debug, format!("Unknown command call {} by {}.", cmd.command, user.nickname));
         user.push_message(
-            IRCMessage {
-                prefix: Some(srv.settings.read().name.clone()),
-                command: numericreply::ERR_UNKNOWNCOMMAND.to_text(),
-                args: vec!(user.nickname.clone(), cmd.command),
-                suffix: Some("Unknown Command.".to_string())
-            }
+            numericreply::ERR_UNKNOWNCOMMAND(cmd.command.as_slice())
+                .into_prefixed_message(user.nickname.as_slice(), srv.settings.read().name.as_slice())
         );
         Nothing
     }
@@ -313,11 +309,7 @@ impl ModulesHandler {
 #[experimental]
 pub fn send_needmoreparams(u: &UserData, cmd: &str, srv: &ServerData) {
     u.push_message(
-        IRCMessage {
-            prefix: Some(srv.settings.read().name.clone()),
-            command: numericreply::ERR_NEEDMOREPARAMS.to_text(),
-            args: vec!(u.nickname.clone(), cmd.to_string()),
-            suffix: Some("Not enough parameters.".to_string())
-        }
+        numericreply::ERR_NEEDMOREPARAMS(cmd)
+                .into_prefixed_message(u.nickname.as_slice(), srv.settings.read().name.as_slice())
     );
 }

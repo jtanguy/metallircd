@@ -52,13 +52,9 @@ impl CommandHandler for CmdJoin {
                     );
                 } else {
                     // invalid chan name
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_BADCHANMASK.to_text(),
-                            args: vec!(user.nickname.clone(), chan.to_string()),
-                            suffix: Some("Bad Channel name.".to_string())
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_BADCHANMASK(chan),
+                        srv.settings.read().name.as_slice()
                     );
                 }
             }
@@ -96,13 +92,9 @@ impl CommandHandler for CmdPart {
                         });
                     },
                     Vacant(_) => {
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_NOTONCHANNEL.to_text(),
-                                args: vec!(user.nickname.clone(), chan.to_string()),
-                                suffix: Some("You're not on that channel.".to_string())
-                            }
+                        user.push_numreply(
+                            numericreply::ERR_NOTONCHANNEL(chan),
+                            srv.settings.read().name.as_slice()
                         );
                     }
                 }
@@ -137,13 +129,9 @@ impl CommandHandler for CmdNames {
                         continue;
                     }
                 }
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_NOSUCHNICK.to_text(),
-                        args: vec!(user.nickname.clone(), chan.to_string()),
-                        suffix: Some("No such nick/channel.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::ERR_NOSUCHNICK(chan),
+                    srv.settings.read().name.as_slice()
                 );
             }
         } else {
@@ -157,55 +145,36 @@ impl CommandHandler for CmdNames {
 /// Assumes the chan exists.
 #[experimental]
 pub fn send_names(me: &UserData, chan: &str, srv: &ServerData) {
-    let msg = IRCMessage {
-        prefix: Some(srv.settings.read().name.clone()),
-        command: numericreply::RPL_NAMEREPLY.to_text(),
-        args: vec!(me.nickname.clone(), "=".to_string(), chan.to_string()),
-        suffix: None
-    };
-    let mut buffer = String::new();
+    let mut buffer = Vec::new();
     if let Some(handle) = srv.channels.read().chan_handle(chan) {
         handle.read().apply_to_members(|_, m| {
-            let mut nextnick = String::new();
-            if m.modes.read().get('o'.to_ascii()) {
-                nextnick.push('o');
-            } else if m.modes.read().get('v'.to_ascii()) {
-                nextnick.push('v');
-            }
-            nextnick.push_str(m.user.upgrade().unwrap().read().nickname.as_slice());
-            if buffer.len() + nextnick.len() + 1 > 510 - msg.protocol_len() {
-                me.push_message(
-                    {
-                        let mut m = msg.clone();
-                        m.suffix = Some(::std::mem::replace(&mut buffer, nextnick));
-                        m
-                    }
-                );
-            } else {
-                if buffer.len() == 0 {
-                    buffer = nextnick;
+            buffer.push((
+                if m.modes.read().get('o'.to_ascii()) {
+                    Some('@')
+                } else if m.modes.read().get('v'.to_ascii()) {
+                    Some('+')
                 } else {
-                    buffer.push(' ');
-                    buffer.push_str(nextnick.as_slice());
-                }
+                    None
+                },
+                m.user.upgrade().unwrap().read().nickname.as_slice().into_string()
+            ));
+            if buffer.len() == 10 {
+                let oldbuff = ::std::mem::replace(&mut buffer, Vec::new());
+                me.push_numreply(
+                    numericreply::RPL_NAMEREPLY('=', chan, oldbuff),
+                    srv.settings.read().name.as_slice()
+                );
             }
         });
     }
     if buffer.len() > 0 {
-        me.push_message(
-            {
-                let mut m = msg.clone();
-                m.suffix = Some(buffer);
-                m
-            }
+        me.push_numreply(
+            numericreply::RPL_NAMEREPLY('=', chan, buffer),
+            srv.settings.read().name.as_slice()
         );
     }
-    me.push_message(
-        IRCMessage {
-            prefix: Some(srv.settings.read().name.clone()),
-            command: numericreply::RPL_ENDOFNAMES.to_text(),
-            args: vec!(me.nickname.clone(), chan.to_string()),
-            suffix: Some("End of NAMES list.".to_string())
-        }
+    me.push_numreply(
+        numericreply::RPL_ENDOFNAMES(chan),
+        srv.settings.read().name.as_slice()
     );
 }

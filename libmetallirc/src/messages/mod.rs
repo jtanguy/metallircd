@@ -9,6 +9,7 @@
 
 pub use self::ircmessage::IRCMessage;
 pub use self::textmessage::{Actor, User, Server, Channel, Everybody, TextMessage};
+pub use self::numericreply::NumericReply;
 
 mod ircmessage;
 pub mod numericreply;

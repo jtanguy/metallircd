@@ -28,26 +28,15 @@ impl CommandHandler for CmdMode {
                 if args.len() == 1 {
                     // only checking modes, oper can read all
                     if user.id == other.id || user.modes.read().get('o'.to_ascii()) {
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::RPL_UMODEIS.to_text(),
-                                args: vec!(
-                                    other.nickname.clone(),
-                                    other.modes.read().to_modestring()
-                                ),
-                                suffix: None
-                            }
+                        user.push_numreply(
+                            numericreply::RPL_UMODEIS(other.modes.read().to_modestring().as_slice()),
+                            srv.settings.read().name.as_slice()
                         );
                     } else {
                         // Looking someone's else modes ? No way !
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_USERSDONTMATCH.to_text(),
-                                args: vec!(user.nickname.clone()),
-                                suffix: Some("Can't change modes for other users.".to_string())
-                            }
+                        user.push_numreply(
+                            numericreply::ERR_USERSDONTMATCH,
+                            srv.settings.read().name.as_slice()
                         );
                     }
                 } else {
@@ -59,26 +48,20 @@ impl CommandHandler for CmdMode {
                 if let Some(membership) = user.membership(args[0].as_slice()) {
                     if args.len() == 1 {
                         // only checking modes
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::RPL_CHANNELMODEIS.to_text(),
-                                args: vec!(
-                                    user.nickname.clone(),
-                                    args[0].clone(),
-                                    chan.read().modes.to_modestring()
-                                ),
-                                suffix: None
-                            }
+                        user.push_numreply(
+                            numericreply::RPL_CHANNELMODEIS(
+                                args[0].as_slice(),
+                                chan.read().modes.to_modestring().as_slice()
+                            ),
+                            srv.settings.read().name.as_slice()
                         );
                         // send creation date as well
-                        user.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::RPL_CREATIONTIME.to_text(),
-                                args: vec!(user.nickname.clone(), args[0].clone()),
-                                suffix: Some(chan.read().creation_time.to_string())
-                            }
+                        user.push_numreply(
+                            numericreply::RPL_CREATIONTIME(
+                                args[0].as_slice(),
+                                chan.read().creation_time
+                            ),
+                            srv.settings.read().name.as_slice()
                         );
                     } else {
                         // Trying to make modifications
@@ -88,23 +71,15 @@ impl CommandHandler for CmdMode {
                         }
                     }
                 } else {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_NOTONCHANNEL.to_text(),
-                            args: vec!(user.nickname.clone(), args[0].clone()),
-                            suffix: Some("You're not on that channel.".to_string())
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_NOTONCHANNEL(args[0].as_slice()),
+                        srv.settings.read().name.as_slice()
                     );
                 }
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_NOSUCHNICK.to_text(),
-                        args: vec!(user.nickname.clone(), args[0].clone()),
-                        suffix: Some("No such nick/channel.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::ERR_NOSUCHNICK(args[0].as_slice()),
+                    srv.settings.read().name.as_slice()
                 );
             }
         } else {
@@ -135,23 +110,15 @@ fn update_user_mode(user: &UserData, other: &UserData, args: Vec<String>, srv: &
                 if b {
                     response.push(c);
                 } else {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_USERSDONTMATCH.to_text(),
-                            args: vec!(user.nickname.clone()),
-                            suffix: Some("Can't change modes for other users.".to_string())
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_USERSDONTMATCH,
+                        srv.settings.read().name.as_slice()
                     );
                 }
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_UMODEUNKNOWNFLAG.to_text(),
-                        args: vec!(user.nickname.clone()),
-                        suffix: Some(format!("Unknown MODE {}.", c))
-                    }
+                user.push_numreply(
+                    numericreply::ERR_UMODEUNKNOWNFLAG,
+                    srv.settings.read().name.as_slice()
                 );
             }}
         }
@@ -190,23 +157,15 @@ fn update_chan_mode(user: &UserData, membership: &Membership,
                 if b {
                     response.push(c);
                 } else {
-                    user.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_CHANOPRIVSNEEDED.to_text(),
-                            args: vec!(user.nickname.clone(), args[0].clone()),
-                            suffix: Some(format!("You're not channel operator."))
-                        }
+                    user.push_numreply(
+                        numericreply::ERR_CHANOPRIVSNEEDED(args[0].as_slice()),
+                        srv.settings.read().name.as_slice()
                     );
                 }
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_UMODEUNKNOWNFLAG.to_text(),
-                        args: vec!(user.nickname.clone()),
-                        suffix: Some(format!("Unknown MODE {}.", c))
-                    }
+                user.push_numreply(
+                    numericreply::ERR_UMODEUNKNOWNFLAG,
+                    srv.settings.read().name.as_slice()
                 );
             }}
         }
@@ -297,23 +256,18 @@ impl ChannelModeHandler for CmdMode {
                     if let Some(membership) = target.channels.read().get(&chan.read().name) {
                         membership.modes.write().set(flag, set);
                     } else {
-                        me.push_message(
-                            IRCMessage {
-                                prefix: Some(srv.settings.read().name.clone()),
-                                command: numericreply::ERR_USERNOTINCHANNEL.to_text(),
-                                args: vec!(me.nickname.clone(), nick.clone(), chan.read().name.clone()),
-                                suffix: Some("They aren't on that channel.".to_string())
-                            }
+                        me.push_numreply(
+                            numericreply::ERR_USERNOTINCHANNEL(
+                                nick.as_slice(),
+                                chan.read().name.as_slice()
+                            ),
+                            srv.settings.read().name.as_slice()
                         );
                     }
                 } else {
-                    me.push_message(
-                        IRCMessage {
-                            prefix: Some(srv.settings.read().name.clone()),
-                            command: numericreply::ERR_NOSUCHNICK.to_text(),
-                            args: vec!(me.nickname.clone(), nick.clone()),
-                            suffix: Some("No such nick/channel.".to_string())
-                        }
+                    me.push_numreply(
+                        numericreply::ERR_NOSUCHNICK(nick.as_slice()),
+                        srv.settings.read().name.as_slice()
                     );
                 }
             }

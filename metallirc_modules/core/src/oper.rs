@@ -56,13 +56,9 @@ impl CommandHandler for CmdOper {
                 // login successful
                 user.modes.write().set('o'.to_ascii(), true);
                 srv.logger.log(Info, format!("Operator {} logged in from user {}.", args[0], user.get_fullname()));
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::RPL_YOUREOPER.to_text(),
-                        args: vec!(user.nickname.clone()),
-                        suffix: Some("You are now an IRC operator.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::RPL_YOUREOPER,
+                    srv.settings.read().name.as_slice()
                 );
                 user.push_message(
                     IRCMessage {
@@ -73,13 +69,9 @@ impl CommandHandler for CmdOper {
                     }
                 );
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_PASSWDMISMATCH.to_text(),
-                        args: vec!(user.nickname.clone()),
-                        suffix: Some("Password incorrect.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::ERR_PASSWDMISMATCH,
+                    srv.settings.read().name.as_slice()
                 );
             }
         } else {
@@ -102,13 +94,9 @@ impl CommandHandler for CmdDie {
             srv.logger.log(Info, format!("Server Shutdown was requested by {}.", user.get_fullname()));
             *srv.signal_shutdown.write() = true
         } else {
-            user.push_message(
-                IRCMessage {
-                    prefix: Some(srv.settings.read().name.clone()),
-                    command: numericreply::ERR_NOPRIVILIGES.to_text(),
-                    args: vec!(user.nickname.clone()),
-                    suffix: Some("Permission Denied: You're not an IRC operator.".to_string())
-                }
+            user.push_numreply(
+                numericreply::ERR_NOPRIVILIGES,
+                srv.settings.read().name.as_slice()
             );
         }
 

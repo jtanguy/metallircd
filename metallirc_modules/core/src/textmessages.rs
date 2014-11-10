@@ -43,32 +43,20 @@ impl CommandHandler for CmdPrivmsgOrNotice {
                         text: args[1].clone()
                     }, srv);
             } else {
-                user.push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_NOSUCHNICK.to_text(),
-                        args: vec!(user.nickname.clone(), args[0].clone()),
-                        suffix: Some("No such nick/channel.".to_string())
-                    }
+                user.push_numreply(
+                    numericreply::ERR_NOSUCHNICK(args[0].as_slice()),
+                    srv.settings.read().name.as_slice()
                 );
             }
         } else if cmd.args.len() >= 1 {
-            user.push_message(
-                IRCMessage {
-                    prefix: Some(srv.settings.read().name.clone()),
-                    command: numericreply::ERR_NOTEXTTOSEND.to_text(),
-                    args: vec!(user.nickname.clone(), cmd.command.clone()),
-                    suffix: Some("No text to send.".to_string())
-                }
+            user.push_numreply(
+                numericreply::ERR_NOTEXTTOSEND,
+                srv.settings.read().name.as_slice()
             );
         } else {
-            user.push_message(
-                IRCMessage {
-                    prefix: Some(srv.settings.read().name.clone()),
-                    command: numericreply::ERR_NORECIPIENT.to_text(),
-                    args: vec!(user.nickname.clone(), cmd.command.clone()),
-                    suffix: Some(format!("No recipient given ({}).", cmd.command))
-                }
+            user.push_numreply(
+                numericreply::ERR_NORECIPIENT(cmd.command.as_slice()),
+                srv.settings.read().name.as_slice()
             );
         }
         (true, Nothing)
@@ -120,7 +108,7 @@ impl MessageSendingHandler for ChannelDispatcher {
         match cmd.target {
             Channel(chan) => {
                 // Check external messages
-                if let User(ref id, ref nickname) = cmd.source {
+                if let User(ref id, _) = cmd.source {
                     let umanager_handle = srv.users.read();
                     let user = umanager_handle.get_user_by_uuid(id).unwrap();
                     // check external messages
@@ -128,13 +116,9 @@ impl MessageSendingHandler for ChannelDispatcher {
                         .map(|c| c.read().modes.get('n'.to_ascii())).unwrap_or(false) {
                         // There is some checking to do
                         if user.membership(chan.as_slice()).is_none() {
-                            user.push_message(
-                                IRCMessage {
-                                    prefix: Some(srv.settings.read().name.clone()),
-                                    command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
-                                    args: vec!(nickname.clone(), chan.clone()),
-                                    suffix: Some("Cannot send to channel.".to_string())
-                                }
+                            user.push_numreply(
+                                numericreply::ERR_CANNOTSENDTOCHAN(chan.as_slice()),
+                                srv.settings.read().name.as_slice()
                             );
                             return None;
                         }
@@ -145,13 +129,9 @@ impl MessageSendingHandler for ChannelDispatcher {
                         // There is some checking to do
                         if !user.membership(chan.as_slice())
                             .map(|m| !m.modes.read().none()).unwrap_or(false) {
-                            user.push_message(
-                                IRCMessage {
-                                    prefix: Some(srv.settings.read().name.clone()),
-                                    command: numericreply::ERR_CANNOTSENDTOCHAN.to_text(),
-                                    args: vec!(nickname.clone(), chan.clone()),
-                                    suffix: Some("Cannot send to channel.".to_string())
-                                }
+                            user.push_numreply(
+                                numericreply::ERR_CANNOTSENDTOCHAN(chan.as_slice()),
+                                srv.settings.read().name.as_slice()
                             );
                             return None;
                         }

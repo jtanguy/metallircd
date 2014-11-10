@@ -79,11 +79,10 @@ pub fn disconnect_user(id: &Uuid, srv: &ServerData, reason: &str) {
 pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
     match action {
         ChangeNick(new_nick) => {
-            let (success, old_name, old_nick) = {
+            let (success, old_name) = {
                 let mut manager = srv.users.write();
                 let old_name = manager.get_user_by_uuid(id).unwrap().get_fullname();
-                let old_nick = manager.get_user_by_uuid(id).unwrap().nickname.clone();
-                (manager.change_nick(id, &new_nick), old_name, old_nick)
+                (manager.change_nick(id, &new_nick), old_name)
             };
             if success {
                 srv.users.read().get_user_by_uuid(id).unwrap().send_to_known(IRCMessage {
@@ -93,13 +92,9 @@ pub fn recycle_user(id: &Uuid, action: RecyclingAction, srv: &ServerData) {
                     suffix: None,
                 });
             } else {
-                srv.users.read().get_user_by_uuid(id).unwrap().push_message(
-                    IRCMessage {
-                        prefix: Some(srv.settings.read().name.clone()),
-                        command: numericreply::ERR_NICKNAMEINUSE.to_text(),
-                        args: vec!(old_nick, new_nick),
-                        suffix: Some("Nickname is already in use.".to_string())
-                    }
+                srv.users.read().get_user_by_uuid(id).unwrap().push_numreply(
+                    numericreply::ERR_NICKNAMEINUSE(new_nick.as_slice()),
+                    srv.settings.read().name.as_slice()
                 );
             }
         },
