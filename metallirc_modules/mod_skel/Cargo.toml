@@ -1,0 +1,19 @@
+[package]
+
+name = "mod_skel"
+version = "0.0.1"
+authors = [""]
+
+[lib]
+name = "mod_skel"
+crate_type = ["dylib"]
+test = true
+
+[dependencies.uuid]
+git = "https://github.com/rust-lang/uuid.git"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs"
+
+[dependencies.libmetallirc]
+path = "../../libmetallirc"
