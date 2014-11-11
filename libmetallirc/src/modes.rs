@@ -87,3 +87,13 @@ impl Clone for Modes {
         Modes { flags: self.flags.clone() }
     }
 }
+
+pub fn letter_for_membership(m: &Modes) -> Option<char> {
+    if m.get('o'.to_ascii()) {
+        Some('@')
+    } else if m.get('v'.to_ascii()) {
+        Some('+')
+    } else {
+        None
+    }
+}

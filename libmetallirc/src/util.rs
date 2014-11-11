@@ -53,6 +53,9 @@ pub fn label_to_lower(nick: &str) -> String {
 /// Returns whether given mask matches given label.
 #[experimental]
 pub fn matches_mask(mut label: &str, mut mask: &str) -> bool {
+    // small optimisation
+    if mask == "*" { return true; }
+
     while !label.is_empty() {
         match mask.slice_shift_char() {
             (Some('?'), mask_tail) => {

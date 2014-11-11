@@ -139,6 +139,7 @@ impl UserManager {
         }
     }
 
+    /// Applies given closure to all users
     #[experimental]
     pub fn apply_to_all(&self, func: |u: &UserData|) {
         for u in self.users.values() {

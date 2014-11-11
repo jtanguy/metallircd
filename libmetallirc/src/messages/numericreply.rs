@@ -30,8 +30,8 @@ pub enum NumericReply<'a> {
     RPL_WHOISSERVER(&'a str, &'a str, &'a str),
     RPL_WHOISOPERATOR(&'a str),
     RPL_WHOISIDLE(&'a str, u32),
-    RPL_ENDOFWHOIS,
-    RPL_WHOISCHANNELS(&'a str, Vec<(char, &'a str)>),
+    RPL_ENDOFWHOIS(&'a str),
+    RPL_WHOISCHANNELS(&'a str, Vec<(Option<char>, &'a str)>),
     // Whowas related
     RPL_WHOWASUSER(&'a str, &'a str, &'a str, &'a str),
     RPL_ENDOFWHOWAS,
@@ -311,10 +311,13 @@ impl<'a> NumericReply<'a> {
                 ),
                 suffix: Some("seconds idle".into_string())
             },
-            RPL_ENDOFWHOIS => IRCMessage {
+            RPL_ENDOFWHOIS(masks) => IRCMessage {
                 prefix: None,
                 command: "318".into_string(),
-                args: vec!(usrnick.into_string()),
+                args: vec!(
+                    usrnick.into_string(),
+                    masks.into_string()
+                ),
                 suffix: Some("End of WHOIS list".into_string())
             },
             // (&'a str, Vec<(char, &'a str)>)
@@ -326,9 +329,9 @@ impl<'a> NumericReply<'a> {
                     nick.into_string()
                 ),
                 suffix: Some(
-                    v.into_iter().fold(String::new(), |mut s, (c, chan)|{
+                    v.into_iter().fold(String::new(), |mut s, (m, chan)|{
                         if s.len() > 0 { s.push(' '); }
-                        s.push(c);
+                        if let Some(c) = m { s.push(c) };
                         s.push_str(chan);
                         s
                     })
@@ -569,21 +572,21 @@ impl<'a> NumericReply<'a> {
                     nick, hg, star, membership, hopcount, real_name) => IRCMessage {
                 prefix: None,
                 command: "352".into_string(),
-                args: {
-                    let mut v = vec!(
-                        usrnick.into_string(),
-                        channel.into_string(),
-                        user.into_string(),
-                        host.into_string(),
-                        server.into_string(),
-                        nick.into_string(),
-                        hg.to_string()
-                    );
-                    if star { v.push("*".into_string()); }
-                    if let Some(c) = membership { v.push(c.to_string()); }
-                    v
-                },
-                suffix: Some(hopcount.to_string() + real_name)
+                args: vec!(
+                    usrnick.into_string(),
+                    channel.into_string(),
+                    user.into_string(),
+                    host.into_string(),
+                    server.into_string(),
+                    nick.into_string(),
+                    {
+                        let mut s = hg.to_string();
+                        if star { s.push('*'); }
+                        if let Some(c) = membership { s.push(c); }
+                        s
+                    }
+                ),
+                suffix: Some(hopcount.to_string() + " " + real_name)
             },
             RPL_ENDOFWHO(name) => IRCMessage {
                 prefix: None,

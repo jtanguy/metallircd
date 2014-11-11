@@ -19,6 +19,7 @@ mod modes;
 mod oper;
 mod textmessages;
 mod topic;
+mod who;
 
 #[no_mangle]
 pub fn init(conf: &toml::TomlTable, logger: &Logger) -> Vec<Box<Module + 'static + Send + Sync>> {
@@ -31,6 +32,8 @@ pub fn init(conf: &toml::TomlTable, logger: &Logger) -> Vec<Box<Module + 'static
         modes::CmdMode,
         topic::CmdTopic,
         list::CmdList,
+        who::CmdWho,
+        who::CmdWhois,
         oper::CmdOper::init(conf, logger),
         commands::CmdNick,
         commands::CmdQuit,
