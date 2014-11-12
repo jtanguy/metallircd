@@ -21,6 +21,8 @@ pub fn write_message(socket: &mut BufferedStream<TcpStream>, msg: IRCMessage) ->
 pub fn check_label(label: &str) -> bool {
     // only ascii nicks are allowed
     if label.len() == 0 || !label.is_ascii() { return false; }
+    // nick must be less than 9 characters
+    if label.len() > 9 { return false; }
     // digit is forbidden in first place
     if label.chars().next().unwrap().is_digit() { return false; }
     // only, letter, digit, or []{}\|^
